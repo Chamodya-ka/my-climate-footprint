@@ -6,7 +6,7 @@
  * - every review covers cause → effect → what helped or would have helped;
  * - placeholder numbers are "game values", never real-world data.
  */
-import type { Area, Disaster, GameData, Mod, QuizPriority, QuizQuestion } from '../data/schemas';
+import type { Area, Disaster, GameData, Mod, QuizQuestion, Region } from '../data/schemas';
 import { bestMissingMod } from '../sim/advice';
 import { damageIfHit } from '../sim/damage';
 import { formatMoney, formatTonnes } from '../sim/format';
@@ -172,7 +172,13 @@ export function regionHazardLabel(data: GameData, regionId: string): string {
 export interface QuizFeedback {
   /** True when the answer has the lowest footprint change of the options (ties count). */
   correct: boolean;
+  /** Right (good), no change to the footprint (warn) or raises it (bad): colours the answer and the verdict. */
+  tone: ReviewTone;
   verdict: string;
+  /** About the chosen answer, as short sentences: why, and which way the footprint moves. */
+  lines: string[];
+  /** About the best answer, when it wasn't chosen (said separately, to keep each bubble short). Empty otherwise. */
+  bestLines: string[];
   /** What the choice does to the carbon footprint (direction only, no figures). */
   footprintLine: string;
   /** The lowest-footprint answers. */
@@ -187,62 +193,62 @@ export function quizFeedback(question: QuizQuestion, answerId: string): QuizFeed
   const correct = chosen.footprintDelta === lowest;
   // No tonne figures here: the HUD arrow and gauge show the change.
   const change = chosen.footprintDelta < 0 ? 'go down' : chosen.footprintDelta > 0 ? 'go up' : 'stay the same';
+  const tone: ReviewTone = correct ? 'good' : chosen.footprintDelta > 0 ? 'bad' : 'warn';
+  const footprintLine = correct
+    ? `You made the right call, so the carbon footprint would ${change}.`
+    : `With this choice, the carbon footprint would ${change}.`;
+  const lines = [chosen.explanation, footprintLine];
+  const bestLines = correct ? [] : best.flatMap((a) => [`The best choice was "${a.label}".`, a.explanation]);
   return {
     correct,
+    tone,
     best,
-    verdict: correct
-      ? '✓ Good choice: the lowest-footprint option.'
-      : `✗ Not the best choice: ${listJoin(best.map((a) => `"${a.label}"`))} would be lower.`,
-    footprintLine: correct
-      ? `You made the right call, so the carbon footprint would ${change}.`
-      : `With this choice, the carbon footprint would ${change}.`,
+    verdict: correct ? '✓ Great choice!' : tone === 'warn' ? '– Not bad, but not the best choice.' : '✗ Not the best choice.',
+    footprintLine,
+    lines,
+    bestLines,
   };
 }
 
-export interface HudIntroStep {
-  key: 'footprint' | 'bank' | 'houseValue' | 'repairCost';
-  title: string;
-  body: string;
+export interface KiwiStep {
+  /** HUD box to highlight while the kiwi talks about it, if any. */
+  key?: 'footprint' | 'bank' | 'houseValue' | 'repairCost';
+  text: string;
 }
 
-/** The short tour of the HUD boxes, shown at the start of a new game. */
-export function hudIntro(data: GameData): HudIntroStep[] {
-  const { startingBudget, incomePercentOfHouseValue, actionsPerRepair } = data.balance;
+/** What the kiwi guide says after Start: the carbon footprint, money, then how a year works. Short sentences. */
+export function kiwiIntro(data: GameData): KiwiStep[] {
+  const { startingBudget, incomePercentOfHouseValue, actionsPerTurn } = data.balance;
   return [
+    { text: "Kia ora! I'm Kiwi. I'll show you how to keep your home safe." },
     {
       key: 'footprint',
-      title: 'Carbon footprint',
-      body:
-        'The carbon added each year, in tonnes. ' +
-        'The choices you make push it up or down, and a bigger footprint makes floods and landslides more likely.',
+      text: 'This is the carbon footprint. Your choices push it up or down. A bigger footprint means more floods and landslides.',
     },
     {
       key: 'bank',
-      title: 'Bank',
-      body:
-        `Your money. You start with ${formatMoney(startingBudget)}, and each year starts with ${incomePercentOfHouseValue}% of what you paid for your house added. ` +
-        `It pays for your house, upgrades and repairs, and can't go below $0.`,
+      text:
+        `This is your bank. You start with ${formatMoney(startingBudget)}. ` +
+        `Each year you earn ${incomePercentOfHouseValue}% of what you paid for your house.`,
     },
     {
       key: 'houseValue',
-      title: 'House value',
-      body:
-        "What your house is worth. Each flood or landslide that hits takes a share of it, and if it falls to $0 the " +
-        "house is destroyed and the game ends. It's $0 until you buy a house.",
+      text: "This is your house's value. Floods and landslides knock it down. If it reaches $0, your house is destroyed.",
     },
     {
       key: 'repairCost',
-      title: 'Total repair cost',
-      body:
-        `What it would cost to fix all the damage right now. Repairing takes ${actionsPerRepair} action and brings the house ` +
-        'back to full value, so each year you choose between repairing and preparing.',
+      text: 'This is what repairs would cost right now. Repairing fixes all the damage, but it uses an action.',
+    },
+    { text: 'Each year starts with a big decision. Make the right call to keep the carbon footprint down.' },
+    {
+      text:
+        `Then you get ${actionsPerTurn} actions. Spend them on upgrades or repairs. ` +
+        'Pick upgrades that suit the hazards where you live.',
+    },
+    {
+      text: `Keep your house standing until the end of ${lastCalendarYear(data)} to win. First, choose where to live. Good luck!`,
     },
   ];
-}
-
-/** After answering: the COP31 priority behind the question and its global goal. */
-export function cop31Line(priority: QuizPriority): string {
-  return `COP31 priority: ${priority.name}. Goal: ${priority.goal}`;
 }
 
 /** The title screen's pitch: a two-line tagline and a short how-to-play. */
@@ -256,4 +262,58 @@ export function titleIntro(data: GameData): { tagline: string; body: string } {
       `Then get ready: you have ${data.balance.actionsPerTurn} actions a year to upgrade or repair. ` +
       'Prepare for the hazards where you live, and the next storm does far less damage.',
   };
+}
+
+export interface KiwiLine {
+  heading?: string;
+  text: string;
+}
+
+/** Kiwi's question on the region map: where to live, or where to move after selling. Short sentences. */
+export function kiwiWhereToLive(state: GameState): KiwiLine {
+  const move = state.thisYear.move;
+  if (!move) {
+    return { heading: 'Where will you live?', text: 'Where you live decides which hazards you face. Pick a region on the map.' };
+  }
+  return {
+    heading: 'Where will you move?',
+    text: `You sold your house for ${formatMoney(move.saleValue)}. Moving uses the rest of this year. Pick a region on the map.`,
+  };
+}
+
+/**
+ * Kiwi's short take on a region: what it's like and what to watch out for. It doesn't
+ * repeat the region's name, which is on the map label.
+ */
+export function kiwiRegionLine(data: GameData, region: Region): KiwiLine {
+  return { text: `${region.blurb} Watch out for ${regionHazardLabel(data, region.id).toLowerCase()}.` };
+}
+
+/** What Kiwi says before the year's question. */
+export function kiwiBeforeQuestion(state: GameState): string {
+  return state.year === 1
+    ? "Now let's see how good you are at keeping your carbon footprint down."
+    : "A new year, a new decision. Let's see if you can keep your carbon footprint down.";
+}
+
+/** What Kiwi says after the question, leading into the action phase. */
+export function kiwiAfterQuestion(state: GameState): string {
+  const house = state.house;
+  return house && house.value < house.fullValue
+    ? 'Your house is damaged. Now repair it, or upgrade it to handle the next climate disaster.'
+    : "Now let's see how you could upgrade your house to handle climate disasters.";
+}
+
+/** Kiwi's one-off tip about the "+" buttons, the first time the upgrades unlock. Short sentences. */
+export function kiwiUpgradeTip(data: GameData): string {
+  const perYear = Math.floor(data.balance.actionsPerTurn / data.balance.actionsPerMod);
+  return `See the + buttons? Each one opens upgrades. Upgrades protect your house from disasters. You can only do ${perYear} each year.`;
+}
+
+/** Kiwi's one-off tip about the two year-end buttons, after the player's first upgrade. Short sentences. */
+export function kiwiYearEndTip(): string {
+  return (
+    'Nice work! Now you have two options. "Sell and Move" sells this house so you can buy another. ' +
+    '"Finish Upgrades" ends the year. Then we see what the weather brings.'
+  );
 }

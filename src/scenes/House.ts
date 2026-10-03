@@ -1,11 +1,12 @@
 import * as Phaser from 'phaser';
 import { SPOTS, type Mod, type Spot } from '../data/schemas';
 import { formatMoney } from '../sim/format';
-import { getArea, getHouse, priorityOf, quizForYear, type HouseState } from '../sim/state';
+import { getArea, getHouse, quizForYear, type HouseState } from '../sim/state';
 import { answerQuiz, applyMod, checkApplyMod, checkEndTurn, checkRepair, checkSell, endTurn, repair, sell } from '../sim/turn';
-import { apply, data, state } from '../session';
+import { apply, data, state, takeKiwiTip } from '../session';
 import { Button, FocusNav, type ButtonOptions } from '../ui/buttons';
-import { modTooltip } from '../ui/copy';
+import { kiwiAfterQuestion, kiwiBeforeQuestion, kiwiUpgradeTip, kiwiYearEndTip, modTooltip } from '../ui/copy';
+import { showKiwiTip, type KiwiTarget } from '../ui/kiwiGuide';
 import { confirmDialog } from '../ui/confirm';
 import { drawHUD } from '../ui/HUD';
 import { drawHouseScene, FULL_SCREEN_ART, houseDamageLevel, preloadBackdrop, spotPositions } from '../ui/houseArt';
@@ -31,6 +32,7 @@ const MOD_BTN_H = 50;
 /** The "+" marker's radius, so the tail stops at its edge. */
 const MARKER_R = 26;
 const WINDOW_DEPTH = 20;
+const REPAIR_LABEL = 'Repair the house';
 
 interface HouseParams {
   /** Main focus to restore after the scene restarts. */
@@ -47,6 +49,8 @@ interface HouseParams {
 export class HouseScene extends Phaser.Scene {
   private params: HouseParams = {};
   private nav!: FocusNav;
+  /** The Sell and Skip / Finish buttons, for Kiwi's year-end tip. */
+  private yearEndTargets: KiwiTarget[] = [];
 
   constructor() {
     super('House');
@@ -77,6 +81,7 @@ export class HouseScene extends Phaser.Scene {
     // "+" markers, left to right so focus order follows the picture.
     const positions = spotPositions(FULL_SCREEN_ART, houseDef);
     const spots = [...SPOTS].sort((a, b) => positions[a].x - positions[b].x);
+    const markerTargets: KiwiTarget[] = [];
     for (const spot of spots) {
       const mods = d.mods.filter((m) => m.spot === spot);
       if (mods.length === 0) continue;
@@ -87,6 +92,7 @@ export class HouseScene extends Phaser.Scene {
         onActivate: () => this.openWindow(spot, mods, this.nav.indexOf(marker), 0),
       });
       this.nav.add(marker);
+      markerTargets.push({ x: positions[spot].x - MARKER_R, y: positions[spot].y - MARKER_R, w: MARKER_R * 2, h: MARKER_R * 2, round: true });
     }
 
     // Buttons tiled along the bottom. Repair only appears when there's damage to fix.
@@ -94,7 +100,7 @@ export class HouseScene extends Phaser.Scene {
     if (house.value < house.fullValue) {
       const repairCheck = checkRepair(s, d);
       buttons.push({
-        label: 'Repair the house',
+        label: REPAIR_LABEL,
         disabledReason: repairCheck.ok ? null : repairCheck.reason,
         onActivate: () => {
           const before = state();
@@ -139,9 +145,13 @@ export class HouseScene extends Phaser.Scene {
       },
     });
     const rowW = buttons.length * BTN_W + (buttons.length - 1) * GAP;
+    this.yearEndTargets = [];
     buttons.forEach((opts, i) => {
       const x = (WIDTH - rowW) / 2 + i * (BTN_W + GAP);
-      this.nav.add(new Button(this, x, HEIGHT - EDGE - BTN_H, BTN_W, BTN_H, { ...opts, fontSize: 20 }));
+      const y = HEIGHT - EDGE - BTN_H;
+      this.nav.add(new Button(this, x, y, BTN_W, BTN_H, { ...opts, fontSize: 20 }));
+      // Kiwi's year-end tip points at Sell and at Skip / Finish, not at Repair.
+      if (opts.label !== REPAIR_LABEL) this.yearEndTargets.push({ x, y, w: BTN_W, h: BTN_H });
     });
     this.nav.focusIndex(this.params.focusIndex ?? 0);
 
@@ -150,7 +160,8 @@ export class HouseScene extends Phaser.Scene {
       const question = quizForYear(d, s);
       showQuestion(this, {
         question,
-        priority: priorityOf(d, question),
+        intro: kiwiBeforeQuestion(s),
+        outro: kiwiAfterQuestion(s),
         from: hud.footprintBox,
         nav: this.nav,
         onAnswer: (answerId) => {
@@ -168,6 +179,9 @@ export class HouseScene extends Phaser.Scene {
     if (reopen) {
       // Reopened after a purchase: no grow-in animation.
       this.openWindow(reopen, d.mods.filter((m) => m.spot === reopen), this.params.focusIndex ?? 0, this.params.windowFocus ?? 0, false);
+    } else if (s.phase === 'action' && s.actionsLeft > 0 && takeKiwiTip('upgrades')) {
+      // Once per game, when the upgrades first unlock: Kiwi (still here from the question) points out the "+" buttons.
+      showKiwiTip(this, { text: kiwiUpgradeTip(d), targets: markerTargets, nav: this.nav, enter: false });
     }
   }
 
@@ -215,6 +229,10 @@ export class HouseScene extends Phaser.Scene {
       onClose: () => {
         this.nav.enabled = true;
         this.nav.focusIndex(markerIndex);
+        // Once per game, after the first upgrade: Kiwi comes back to explain how the year ends.
+        if (state().thisYear.modsBuilt.length > 0 && takeKiwiTip('yearEnd')) {
+          showKiwiTip(this, { text: kiwiYearEndTip(), targets: this.yearEndTargets, nav: this.nav, enter: true });
+        }
       },
     });
     layer.add([title, actions, info]);
