@@ -1,14 +1,16 @@
 import * as Phaser from 'phaser';
 import { SPOTS, type Mod, type Spot } from '../data/schemas';
 import { formatMoney } from '../sim/format';
-import { getHouse, quizForYear, type HouseState } from '../sim/state';
+import { getArea, getHouse, quizForYear, type HouseState } from '../sim/state';
 import { answerQuiz, applyMod, checkApplyMod, checkEndTurn, checkRepair, checkSell, endTurn, repair, sell } from '../sim/turn';
 import { apply, data, state } from '../session';
 import { Button, FocusNav, type ButtonOptions } from '../ui/buttons';
 import { modTooltip } from '../ui/copy';
 import { confirmDialog } from '../ui/confirm';
 import { drawHUD } from '../ui/HUD';
-import { drawHouseScene, FULL_SCREEN_ART, spotPositions } from '../ui/houseArt';
+import { drawHouseScene, FULL_SCREEN_ART, houseDamageLevel, spotPositions } from '../ui/houseArt';
+import { modIconKey } from '../ui/houseAssets';
+import { createHouseTransition } from '../ui/houseTransitions';
 import { showQuestion } from '../ui/questionDialog';
 import { SPOT_COPY, SpotButton } from '../ui/spots';
 import { colours, HEIGHT, text, WIDTH } from '../ui/theme';
@@ -20,6 +22,8 @@ const BTN_H = 56;
 const GAP = 16;
 const WIN_BTN_H = 50;
 const WIN_GAP = 6;
+/** Upgrade icon size in the upgrade windows. */
+const ICON = 56;
 
 const WINDOW_W = 620;
 const MOD_BTN_H = 56;
@@ -86,7 +90,16 @@ export class HouseScene extends Phaser.Scene {
         label: 'Repair the house',
         disabledReason: repairCheck.ok ? null : repairCheck.reason,
         onActivate: () => {
-          if (apply(repair(state(), d))) this.scene.restart({ focusIndex: this.nav.focusedIndex } satisfies HouseParams);
+          const before = state();
+          if (!apply(repair(before, d))) return;
+          // Play the designer's repair animation over the house, then show the repaired house.
+          const focusIndex = this.nav.focusedIndex;
+          this.nav.enabled = false;
+          const region = d.regions.find((r) => r.id === getArea(d, houseDef.areaId).regionId)!.mapRegion;
+          const from = houseDamageLevel(before.house);
+          const tr = createHouseTransition(this, houseDef, FULL_SCREEN_ART, region, from);
+          tr.image.setDepth(-5);
+          void tr.play('repair', from, 0).then(() => this.scene.restart({ focusIndex } satisfies HouseParams));
         },
       });
     }
@@ -209,7 +222,11 @@ export class HouseScene extends Phaser.Scene {
       const check = checkApplyMod(s, d, mod.id);
       // Price when it can be bought; otherwise why not, so the reason is visible without focusing it.
       const status = built ? (mod.type === 'consumable' ? '✓ Stocked' : '✓ Built') : check.ok ? formatMoney(mod.cost) : `✕ ${check.reason}`;
-      const b = new Button(this, left, by, inner, MOD_BTN_H, {
+      // The upgrade's icon, then its button.
+      const icon = this.add.image(left + ICON / 2, by + MOD_BTN_H / 2, modIconKey(mod.icon)).setDisplaySize(ICON, ICON);
+      if (!check.ok && !built) icon.setAlpha(0.5);
+      layer.add(icon);
+      const b = new Button(this, left + ICON + WIN_GAP, by, inner - ICON - WIN_GAP, MOD_BTN_H, {
         label: mod.name,
         detail: status,
         fontSize: 18,

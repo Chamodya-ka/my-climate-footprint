@@ -1,0 +1,128 @@
+{
+  "plusIcon": "icons/mods/plus.svg",
+  "mods": [
+    {
+      "id": "solar_panels",
+      "name": "Solar panels",
+      "zone": "roof",
+      "flood": 0,
+      "landslide": 0,
+      "type": "Permanent",
+      "note": "Cuts the neighbourhood footprint",
+      "icon": "icons/mods/solar_panels.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "seal_doors",
+      "name": "Seal doors",
+      "zone": "door",
+      "flood": -20,
+      "landslide": 0,
+      "type": "Permanent",
+      "icon": "icons/mods/seal_doors.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "store_food",
+      "name": "Store food",
+      "zone": "door",
+      "flood": -5,
+      "landslide": -5,
+      "type": "Consumable",
+      "icon": "icons/mods/store_food.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "sandbags",
+      "name": "Sandbags at house",
+      "zone": "door",
+      "flood": -5,
+      "landslide": 0,
+      "type": "Consumable",
+      "icon": "icons/mods/sandbags.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "retaining_wall",
+      "name": "Retaining wall",
+      "zone": "garden",
+      "flood": 0,
+      "landslide": -50,
+      "type": "Permanent",
+      "icon": "icons/mods/retaining_wall.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "soil_nailing",
+      "name": "Soil nailing",
+      "zone": "garden",
+      "flood": 0,
+      "landslide": -20,
+      "type": "Permanent",
+      "icon": "icons/mods/soil_nailing.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "planting_trees",
+      "name": "Planting trees",
+      "zone": "garden",
+      "flood": 0,
+      "landslide": -10,
+      "type": "Permanent",
+      "note": "Also cuts the footprint",
+      "icon": "icons/mods/planting_trees.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "drainage",
+      "name": "Drainage",
+      "zone": "garden",
+      "flood": -15,
+      "landslide": 0,
+      "type": "Permanent",
+      "icon": "icons/mods/drainage.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "drainage_loose_soil",
+      "name": "Drainage over loose soil",
+      "zone": "garden",
+      "flood": 0,
+      "landslide": -5,
+      "type": "Permanent",
+      "icon": "icons/mods/drainage_loose_soil.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "foundation_improvement",
+      "name": "Foundation improvement",
+      "zone": "foundation",
+      "flood": -15,
+      "landslide": 0,
+      "type": "Permanent",
+      "icon": "icons/mods/foundation_improvement.svg",
+      "actionCost": 1,
+      "cost": null
+    },
+    {
+      "id": "elevate_house",
+      "name": "Elevate the house (stilts)",
+      "zone": "foundation",
+      "flood": -30,
+      "landslide": 0,
+      "type": "Permanent",
+      "icon": "icons/mods/elevate_house.svg",
+      "actionCost": 1,
+      "cost": null
+    }
+  ]
+}

@@ -24,6 +24,8 @@ export interface HouseState {
    */
   fullValue: number;
   value: number;
+  /** Disasters that have hit since the last repair (picks the damaged house picture). */
+  unrepairedHits: number;
   /** Permanent mod ids, each at most once. */
   permanentMods: string[];
   /** Consumable mod ids currently stocked, each at most once. */

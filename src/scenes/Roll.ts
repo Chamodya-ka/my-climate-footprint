@@ -1,23 +1,28 @@
 import * as Phaser from 'phaser';
 import { formatMoney } from '../sim/format';
-import { getHouse, type GameState, type YearRecord } from '../sim/state';
+import { getArea, getHouse, type GameState, type YearRecord } from '../sim/state';
 import { data, state } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
 import { drawCalendar, CALENDAR_H, CALENDAR_W } from '../ui/calendar';
 import { calendarYear, yearVerdict } from '../ui/copy';
 import { drawHUD } from '../ui/HUD';
-import { drawHouseScene, FULL_SCREEN_ART, groundY, slopeTop, type ArtBox } from '../ui/houseArt';
+import { drawHouseScene, FULL_SCREEN_ART, houseDamageLevel, type ArtBox } from '../ui/houseArt';
+import type { DamageLevel } from '../ui/houseAssets';
+import { createHouseTransition, type HouseTransition } from '../ui/houseTransitions';
 import { panel } from '../ui/panels';
 import { colours, HEIGHT, text, WIDTH } from '../ui/theme';
 
-const EFFECT_MS = 2200;
 const EDGE = 16;
 const PANEL_H = 170;
 const INFO_W = 340;
 const GAP = 24;
 const BUTTON_W = 300;
 const INCOME_ICON_SCALE = 1.4;
+/** Pause after the last animation (or the verdict, in a quiet year) before the reveal. */
+const SETTLE_MS = 400;
+/** Light rain while the calendar flips; a hit plays the designer's own storm animation. */
+const RAIN_PER_SEC = 60;
 
 /** The weather roll. The outcome is already decided by the sim; the flipping calendar is cosmetic. */
 export class Roll extends Phaser.Scene {
@@ -42,7 +47,8 @@ export class Roll extends Phaser.Scene {
     let hud = drawHUD(this, d, shown);
 
     const box: ArtBox = FULL_SCREEN_ART;
-    let art = drawHouseScene(this, d, getHouse(d, rec.houseId), shown.house, box).setDepth(-1);
+    const houseDef = getHouse(d, rec.houseId);
+    let art = drawHouseScene(this, d, houseDef, shown.house, box).setDepth(-1);
     this.frame = { type: 'onLeave', source: new Phaser.Geom.Rectangle(box.x, box.y, box.w, box.h) };
 
     // Bottom panel: income, the flipping calendar and what happened, then the continue button.
@@ -69,7 +75,8 @@ export class Roll extends Phaser.Scene {
     }
 
     const anyHit = rec.results.some((r) => r.hit);
-    this.rain(box, anyHit ? 400 : 60);
+    // The same light rain every year, so the weather doesn't give the outcome away early.
+    this.rain(box, RAIN_PER_SEC);
 
     // A calendar flips through the year: time passing, with no numbers or odds.
     // The sim has already decided the outcome.
@@ -84,18 +91,35 @@ export class Roll extends Phaser.Scene {
     outcome.setOrigin(0, 0.5);
     ui.add([calendar, outcome]);
 
+    const region = d.regions.find((rg) => rg.id === getArea(d, houseDef.areaId).regionId)!.mapRegion;
+    const wait = (ms: number) => new Promise<void>((resolve) => this.time.delayedCall(ms, resolve));
+
     calendar.flipYear(() => {
-      // The words carry the meaning, not just the colour.
-      const verdict = yearVerdict(rec.results);
-      outcome.setText(verdict).setColor(anyHit ? colours.bad : colours.good);
-      announce(verdict);
-      for (const r of rec.results) if (r.hit) this.disasterEffect(r.disaster, box);
-      this.time.delayedCall(anyHit ? EFFECT_MS : 300, () => {
-        // Reveal the resolved state.
+      void (async () => {
+        // The words carry the meaning, not just the colour.
+        const verdict = yearVerdict(rec.results);
+        outcome.setText(verdict).setColor(anyHit ? colours.bad : colours.good);
+        announce(verdict);
+
+        // Each disaster that hit plays the designer's flood or landslip animation over the house,
+        // stepping the damage picture up one level (to at most 2).
+        let level = houseDamageLevel(shown.house);
+        let transition: HouseTransition | null = null;
+        for (const r of rec.results) {
+          if (!r.hit) continue;
+          transition ??= createHouseTransition(this, houseDef, box, region, level);
+          transition.image.setDepth(-0.5); // over the static house, under the panel
+          const next = Math.min(level + 1, 2) as DamageLevel;
+          level = await transition.play(r.disaster === 'flood' ? 'flood' : 'landslip', level, next);
+        }
+        await wait(SETTLE_MS);
+
+        // Reveal the resolved state: HUD, and the house with its upgrades and damage.
         hud.destroy();
         hud = drawHUD(this, d, s);
         art.destroy();
-        art = drawHouseScene(this, d, getHouse(d, rec.houseId), s.house, box).setDepth(-1);
+        art = drawHouseScene(this, d, houseDef, s.house, box).setDepth(-1);
+        transition?.destroy();
         const nav = new FocusNav(this);
         const button = new Button(this, WIDTH - EDGE - 16 - BUTTON_W, py + PANEL_H - 76, BUTTON_W, 60, {
           label: 'See the year review',
@@ -105,7 +129,7 @@ export class Roll extends Phaser.Scene {
         ui.add(button);
         nav.add(button);
         nav.focusFirstAvailable();
-      });
+      })();
     });
   }
 
@@ -122,32 +146,5 @@ export class Roll extends Phaser.Scene {
       tint: 0xcfe8ff,
       deathZone: this.frame!,
     }).setDepth(1);
-  }
-
-  private disasterEffect(disaster: 'flood' | 'landslide', box: ArtBox): void {
-    if (disaster === 'flood') {
-      const ground = groundY(box);
-      // Tween scaleY, not height: Phaser 4 rectangles don't redraw when height changes.
-      const depth = box.y + box.h - ground + 70;
-      const water = this.add.rectangle(box.x, box.y + box.h, box.w, depth, colours.water, 0.7).setOrigin(0, 1).setDepth(1);
-      water.setScale(1, 0);
-      this.tweens.add({ targets: water, scaleY: 1, duration: EFFECT_MS * 0.8, ease: 'Sine.easeOut' });
-      this.cameras.main.shake(300, 0.003);
-    } else {
-      const top = slopeTop(box);
-      this.add.particles(top.x, top.y, 'dot', {
-        speedX: { min: -260, max: -120 },
-        speedY: { min: 40, max: 200 },
-        gravityY: 400,
-        lifespan: 1600,
-        quantity: 6,
-        frequency: 40,
-        duration: EFFECT_MS * 0.6,
-        scale: { min: 0.6, max: 1.8 },
-        tint: [0x6b4a2b, 0x8a6a46, 0x5a5a5a],
-        deathZone: this.frame!,
-      }).setDepth(1);
-      this.cameras.main.shake(700, 0.012);
-    }
   }
 }

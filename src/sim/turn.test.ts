@@ -251,6 +251,23 @@ describe('weather resolution', () => {
   });
 });
 
+describe('unrepaired hits', () => {
+  it('count up with each hit and reset on repair', () => {
+    let s = startedGame(FLOOD_HOUSE, alwaysHits);
+    expect(s.house!.unrepairedHits).toBe(0);
+    s = nextYear(playYear(s, alwaysHits), alwaysHits);
+    expect(s.house!.unrepairedHits).toBe(1);
+    s = playYear(s, alwaysHits);
+    expect(s.house!.unrepairedHits).toBe(2);
+    s = nextYear(s, alwaysHits);
+    expect(expectOk(repair(s, alwaysHits)).house!.unrepairedHits).toBe(0);
+  });
+
+  it("don't change in a year with no disaster", () => {
+    expect(playYear(startedGame(FLOOD_HOUSE, neverHits), neverHits).house!.unrepairedHits).toBe(0);
+  });
+});
+
 describe('consumables', () => {
   it('are used up when their disaster hits', () => {
     let s = startedGame(FLOOD_HOUSE, alwaysHits);

@@ -82,6 +82,7 @@ export function buyHouse(state: GameState, data: GameData, houseId: string): Res
     houseId,
     purchasePrice: house.price,
     fullValue: house.price,
+    unrepairedHits: 0,
     value: house.price,
     permanentMods: [],
     consumables: [],
@@ -173,6 +174,7 @@ export function repair(state: GameState, data: GameData): Result {
   s.bank -= cost;
   s.actionsLeft -= data.balance.actionsPerRepair;
   house.value = house.fullValue;
+  house.unrepairedHits = 0;
   return ok(s);
 }
 
@@ -278,6 +280,7 @@ export function endTurn(state: GameState, data: GameData): Result {
       const lost = valueLostFor(house.fullValue, percent);
       const protecting = activeMods(data, house).filter((m) => (m.reductions[disaster] ?? 0) > 0);
       house.value = Math.max(0, house.value - lost);
+      house.unrepairedHits += 1;
       house.destroyed = house.value <= 0;
       const used = protecting.filter((m) => m.type === 'consumable').map((m) => m.id);
       house.consumables = house.consumables.filter((id) => !used.includes(id));

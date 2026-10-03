@@ -2,7 +2,8 @@ import * as Phaser from 'phaser';
 import type { Spot } from '../data/schemas';
 import { announce } from './a11y';
 import type { Focusable, FocusNav } from './buttons';
-import { colours, FONT } from './theme';
+import { PLUS_ICON } from './houseAssets';
+import { colours } from './theme';
 
 export const SPOT_COPY: Record<Spot, { name: string; intro: string }> = {
   door: { name: 'Door', intro: 'Keep floodwater out at the doorway, and be ready to stay home safely.' },
@@ -33,10 +34,9 @@ export class SpotButton extends Phaser.GameObjects.Container implements Focusabl
 
   constructor(scene: Phaser.Scene, x: number, y: number, readonly opts: SpotButtonOptions) {
     super(scene, x, y);
-    this.circle = scene.add.circle(0, 0, RADIUS, 0xffffff).setStrokeStyle(3, 0x10202b);
-    const plus = scene.add
-      .text(0, -1, '+', { fontFamily: FONT, fontSize: '34px', color: '#10202b', fontStyle: 'bold' })
-      .setOrigin(0.5);
+    // The focus ring sits behind the designer's "+" icon; the circle is also the click target.
+    this.circle = scene.add.circle(0, 0, RADIUS, 0xffffff, 0.001).setStrokeStyle(0, 0x10202b);
+    const plus = scene.add.image(0, 0, PLUS_ICON).setDisplaySize(RADIUS * 2.4, RADIUS * 2.4);
     this.add([this.circle, plus]);
     this.setSize(RADIUS * 2, RADIUS * 2);
     this.circle.setInteractive({ useHandCursor: true });
@@ -56,7 +56,7 @@ export class SpotButton extends Phaser.GameObjects.Container implements Focusabl
   }
 
   setFocused(focused: boolean): void {
-    this.circle.setStrokeStyle(focused ? 6 : 3, focused ? colours.focus : 0x10202b);
+    this.circle.setStrokeStyle(focused ? 6 : 0, colours.focus);
     this.setScale(focused ? FOCUS_SCALE : 1);
     if (focused) {
       this.opts.onFocus?.();

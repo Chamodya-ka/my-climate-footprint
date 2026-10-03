@@ -105,6 +105,8 @@ export const modsSchema = z.strictObject({
       z.strictObject({
         id,
         name: z.string().min(1),
+        /** Icon in assets/map/mod_icons/png (<icon>_128.png). */
+        icon: z.string().regex(/^[a-z_]+$/),
         spot: z.enum(SPOTS),
         type: z.enum(['permanent', 'consumable']),
         cost: money,

@@ -6,7 +6,7 @@ import { data, state } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
 import { calendarYear, DISASTER_NAME, lastCalendarYear, PLACEHOLDER_NOTE, signedTonnes } from '../ui/copy';
-import { drawHouseScene, FULL_SCREEN_ART } from '../ui/houseArt';
+import { drawHouseScene } from '../ui/houseArt';
 import { panel, textBlock } from '../ui/panels';
 import { colours, FONT, HEIGHT, text, WIDTH } from '../ui/theme';
 
@@ -34,7 +34,6 @@ export class FinalReport extends Phaser.Scene {
         y: 0,
         w: rightX - gapX,
         h: HEIGHT,
-        groundFrac: FULL_SCREEN_ART.groundFrac,
       }).setDepth(-10);
     }
     const top = EDGE;

@@ -1,51 +1,67 @@
 import * as Phaser from 'phaser';
 import type { GameData, House, Spot } from '../data/schemas';
-import { getArea, getHouse, type HouseState } from '../sim/state';
-import { getZones, spriteKey, type HouseZones } from './houseAssets';
-import { colours, FONT, HEIGHT, WIDTH } from './theme';
+import { getHouse, type HouseState } from '../sim/state';
+import { backgroundKey, damageLevel, getHouseArt, getZones, spriteKey, type DamageLevel, type HouseZones } from './houseAssets';
+import { FONT, HEIGHT, WIDTH } from './theme';
 
 /*
- * A house scene: a code-drawn backdrop (sky, region scenery, ground) with the
- * house sprite from assets/map/house_and_region_assets on top. Mod overlays,
- * damage and the "+" markers are placed from the sprite's measured zones
- * (door, foundation, garden, walls), so they fit any house.
- * Each overlay also gets a small text tag so mods aren't shown by colour alone.
+ * A house scene, laid out like the designer's disaster assets: everything sits on
+ * a 1600×1000 stage, drawn background → house sprite → (mod overlays) → foreground.
+ * - Background: `_normal`, or `_post` once the house has unrepaired damage.
+ * - Sprite: clean, `_dmg1` (one unrepaired hit) or `_dmg2` (two or more).
+ * - Foreground (flood houses only): the water left behind, over the house.
+ * Mod overlays and "+" markers are placed from the sprite's measured zones and
+ * the designer's "+" positions. Each overlay has a small text tag so mods aren't
+ * shown by colour alone.
  */
+
+/** The designer's stage: backgrounds are 1600×1000, and the 1200×900 sprite sits centred at 94% of the stage height. */
+export const STAGE = { w: 1600, h: 1000 };
+const SPRITE_H = STAGE.h * 0.94;
+const SPRITE_W = (SPRITE_H * 4) / 3;
+export const SPRITE_ON_STAGE = { x: (STAGE.w - SPRITE_W) / 2, y: (STAGE.h - SPRITE_H) / 2, w: SPRITE_W, h: SPRITE_H };
+const SPRITE_PX = { w: 1200, h: 900 };
+/** Height of the foundation-improvement band, in sprite pixels. */
+const FOUNDATION_BAND = 50;
 
 export interface ArtBox {
   x: number;
   y: number;
   w: number;
   h: number;
-  /** Ground line as a fraction of the box height (default 0.78). */
-  groundFrac?: number;
+  /** 'cover' fills the box (cropping the stage's edges); 'contain' (default) shows the whole stage. */
+  fit?: 'cover' | 'contain';
+  /** Extra vertical shift of the stage, in screen pixels (negative moves it up). */
+  shiftY?: number;
 }
 
-/** The whole canvas, with the ground line just above the House scene's bottom buttons. */
-export const FULL_SCREEN_ART: ArtBox = { x: 0, y: 0, w: WIDTH, h: HEIGHT, groundFrac: 0.59 };
+/**
+ * The whole canvas, filled edge to edge. Shifted up so the cropped strip comes off the sky,
+ * keeping the house and its garden clear of the buttons along the bottom.
+ */
+export const FULL_SCREEN_ART: ArtBox = { x: 0, y: 0, w: WIDTH, h: HEIGHT, fit: 'cover', shiftY: -40 };
 
-/** How much of the space above the ground the house may fill, and of the box width. */
-const MAX_HEIGHT_FRAC = 0.72;
-const MAX_WIDTH_FRAC = 0.8;
-/** Height of the foundation-improvement band, in sprite pixels. */
-const FOUNDATION_BAND = 50;
-
-/** Ground level within the box, for effects (floodwater rises to here and above). */
-export function groundY(box: ArtBox): number {
-  return box.y + box.h * (box.groundFrac ?? 0.78);
+export interface StagePlacement {
+  /** Screen position of stage pixel (0, 0), and stage pixels → screen. */
+  x: number;
+  y: number;
+  scale: number;
 }
 
-/** Where the backdrop's slope is (Hills only), for slip debris. */
-export function slopeTop(box: ArtBox): { x: number; y: number } {
-  // A point part-way up the slope line, from (0.55w, ground) to (w, 0.15h), clear of the corner HUD box.
-  const ground = groundY(box);
-  const peak = box.y + box.h * 0.15;
-  const t = 0.55;
-  return { x: box.x + box.w * (0.55 + 0.45 * t), y: ground - (ground - peak) * t };
+/** Where the 1600×1000 stage lands in the box. */
+export function placeStage(box: ArtBox): StagePlacement {
+  const fitScale = box.fit === 'cover' ? Math.max : Math.min;
+  const scale = fitScale(box.w / STAGE.w, box.h / STAGE.h);
+  return {
+    x: box.x + (box.w - STAGE.w * scale) / 2,
+    y: box.y + (box.h - STAGE.h * scale) / 2 + (box.shiftY ?? 0),
+    scale,
+  };
 }
 
 export interface SpritePlacement {
   zones: HouseZones;
+  stage: StagePlacement;
   /** Scale from sprite pixels to screen pixels. */
   s: number;
   /** Screen position of sprite pixel (0, 0). */
@@ -55,71 +71,43 @@ export interface SpritePlacement {
   at: (x: number, y: number) => { x: number; y: number };
 }
 
-/** Fits the house sprite into the box with its foundation line on the ground. */
+/** Places the house sprite on the stage, inside the box. */
 export function placeSprite(box: ArtBox, houseDef: House): SpritePlacement {
-  const zones = getZones(houseDef.sprite);
-  const { content } = zones;
-  const footY = zones.zones.foundation.y + zones.zones.foundation.h;
-  const ground = groundY(box);
-  const s = Math.min(((ground - box.y) * MAX_HEIGHT_FRAC) / (footY - content.y), (box.w * MAX_WIDTH_FRAC) / content.w);
-  const ox = box.x + box.w / 2 - (content.x + content.w / 2) * s;
-  const oy = ground - footY * s;
-  return { zones, s, ox, oy, at: (x, y) => ({ x: ox + x * s, y: oy + y * s }) };
+  const stage = placeStage(box);
+  const s = (SPRITE_ON_STAGE.w / SPRITE_PX.w) * stage.scale;
+  const ox = stage.x + SPRITE_ON_STAGE.x * stage.scale;
+  const oy = stage.y + SPRITE_ON_STAGE.y * stage.scale;
+  return { zones: getZones(houseDef.sprite), stage, s, ox, oy, at: (x, y) => ({ x: ox + x * s, y: oy + y * s }) };
 }
 
-/** Screen positions of the upgrade "+" markers, one per zone that has mods. */
+/** Screen positions of the upgrade "+" markers, from the designer's positions. */
 export function spotPositions(box: ArtBox, houseDef: House): Record<Spot, { x: number; y: number }> {
-  const { zones, at } = placeSprite(box, houseDef);
-  const { door, foundation, garden } = zones.zones;
-  return {
-    door: at(door.cx, door.cy),
-    // Off-centre so the three markers don't stack on the doorway.
-    foundation: at(foundation.x + foundation.w * 0.22, foundation.cy),
-    garden: at(garden.x + garden.w * 0.86, garden.cy),
-  };
+  const { at } = placeSprite(box, houseDef);
+  const { plus } = getHouseArt(houseDef.sprite);
+  return { door: at(plus.door.x, plus.door.y), foundation: at(plus.foundation.x, plus.foundation.y), garden: at(plus.garden.x, plus.garden.y) };
 }
 
-function drawScenery(g: Phaser.GameObjects.Graphics, data: GameData, houseDef: House, box: ArtBox): void {
-  const area = getArea(data, houseDef.areaId);
-  const ground = groundY(box);
-  g.fillStyle(colours.sky).fillRect(box.x, box.y, box.w, box.h);
-  if (area.regionId === 'coastal') {
-    g.fillStyle(colours.water).fillRect(box.x, ground - 30, box.w * 0.3, box.h - (ground - 30 - box.y));
-    g.fillStyle(0xe8d9a8).fillRect(box.x + box.w * 0.3, ground - 6, box.w * 0.12, box.h - (ground - 6 - box.y));
-  } else if (area.id === 'city-centre') {
-    g.fillStyle(0x6b7f8e);
-    [0.02, 0.12, 0.8, 0.9].forEach((fx, i) =>
-      g.fillRect(box.x + box.w * fx, ground - box.h * (0.17 + i * 0.02), box.w * 0.08, box.h * (0.17 + i * 0.02)),
-    );
-  } else if (area.id === 'river-valley') {
-    g.fillStyle(0x4f7a3c).fillTriangle(box.x, ground, box.x + box.w * 0.4, box.y + box.h * 0.35, box.x + box.w * 0.8, ground);
-    // The river runs across the valley floor behind the house.
-    g.fillStyle(colours.grass).fillRect(box.x, ground - box.h * 0.04, box.w, box.h * 0.04);
-    g.fillStyle(colours.water).fillRect(box.x, ground - box.h * 0.033, box.w, box.h * 0.02);
-  }
-  if (area.regionId === 'hills') {
-    g.fillStyle(colours.soil).fillTriangle(box.x + box.w * 0.55, ground, box.x + box.w, box.y + box.h * 0.15, box.x + box.w, ground);
-    g.fillStyle(colours.grass).fillTriangle(box.x + box.w * 0.6, ground - 4, box.x + box.w, box.y + box.h * 0.2, box.x + box.w, ground - 4);
-  }
-  const grassFrom = area.regionId === 'coastal' ? box.w * 0.42 : 0;
-  g.fillStyle(colours.grass).fillRect(box.x + grassFrom, ground, box.w - grassFrom, box.h - (ground - box.y));
+/** The damage picture to show for a house: clean, one hit, or two or more. A destroyed house shows the worst. */
+export function houseDamageLevel(house: HouseState | null): DamageLevel {
+  if (!house) return 0;
+  return house.destroyed ? 2 : damageLevel(house.unrepairedHits);
 }
 
 export function drawHouseScene(
   scene: Phaser.Scene,
-  data: GameData,
+  _data: GameData,
   houseDef: House,
   house: HouseState | null,
   box: ArtBox,
 ): Phaser.GameObjects.Container {
   const c = scene.add.container(0, 0);
-  const back = scene.add.graphics();
-  c.add(back);
-  drawScenery(back, data, houseDef, box);
-
   const p = placeSprite(box, houseDef);
-  const { zones, s, at } = p;
-  const sprite = scene.add.image(p.ox, p.oy, spriteKey(houseDef.sprite)).setOrigin(0).setScale(s);
+  const { zones, s, at, stage } = p;
+  const level = houseDamageLevel(house);
+  const art = getHouseArt(houseDef.sprite);
+
+  c.add(scene.add.image(stage.x, stage.y, backgroundKey(houseDef.sprite, level > 0 ? 'post' : 'normal')).setOrigin(0).setScale(stage.scale));
+  const sprite = scene.add.image(p.ox, p.oy, spriteKey(houseDef.sprite, level)).setOrigin(0).setScale(s);
   c.add(sprite);
   const g = scene.add.graphics();
   c.add(g);
@@ -143,36 +131,6 @@ export function drawHouseScene(
   // overlays are anchored to the walls and door instead.
   const wallBottom = wall.y + wall.h;
   const doorBase = door.y + door.h;
-
-  if (house?.destroyed) {
-    sprite.setAlpha(0.35).setTint(0x8a7a6a);
-    g.fillStyle(0x7a6450);
-    for (let i = 0; i < 12; i++) {
-      const r = at(wall.x + (wall.w * (i + 0.5)) / 12, footY);
-      g.fillRect(r.x - px(40), r.y - px(30 + (i % 3) * 30), px(80), px(30 + (i % 3) * 30));
-    }
-    const mid = at(wall.x + wall.w / 2, wall.y + wall.h / 2);
-    tag(mid.x, mid.y, 'Destroyed');
-    return c;
-  }
-
-  if (house && house.value < house.fullValue) {
-    // A zig-zag down the lower walls, left of the door, so it stays on the house on every sprite.
-    const crackTop = wall.y + wall.h * 0.35;
-    const crackX = (door.x + wall.x) / 2;
-    const pts = [
-      [0.02, 0],
-      [-0.03, 0.35],
-      [0.04, 0.65],
-      [-0.01, 1],
-    ].map(([fx, fy]) => at(crackX + wall.w * fx!, crackTop + (wallBottom - crackTop) * fy!));
-    g.lineStyle(px(8), 0x222222);
-    g.beginPath();
-    pts.forEach((q, i) => (i === 0 ? g.moveTo(q.x, q.y) : g.lineTo(q.x, q.y)));
-    g.strokePath();
-    const top = at(crackX, crackTop);
-    tag(top.x, top.y - 14, 'Damaged');
-  }
 
   // Foundation zone.
   if (mods.has('elevate')) {
@@ -263,6 +221,16 @@ export function drawHouseScene(
     }
     const t = at(garden.x + garden.w * 0.13, garden.y + garden.h * 0.3);
     tag(t.x, t.y - px(220), 'Trees');
+  }
+
+  // Flood water left behind sits over the house and its overlays.
+  if (level > 0 && art.hasForeground) {
+    c.add(scene.add.image(stage.x, stage.y, backgroundKey(houseDef.sprite, 'post_fg')).setOrigin(0).setScale(stage.scale));
+  }
+  if (house?.destroyed) {
+    sprite.setTint(0x9a8a7a);
+    const mid = at(wall.x + wall.w / 2, wall.y + wall.h / 2);
+    tag(mid.x, mid.y, 'Destroyed');
   }
   return c;
 }
