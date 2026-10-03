@@ -1,6 +1,6 @@
 {
-  "startingBudget": 1000000,
-  "yearlyIncome": 50000,
+  "startingBudget": 1500000,
+  "incomePercentOfHouseValue": 20,
   "actionsPerTurn": 3,
   "actionsPerMod": 1,
   "actionsPerRepair": 1,

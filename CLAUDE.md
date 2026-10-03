@@ -63,7 +63,7 @@ tools/blender/house_sprites.py   (obsolete placeholder; house sprites now come f
 
 1. Title screen → **Region select** → **House select** → buy if within budget.
 2. **Yearly turn loop:**
-   1. **Year start:** `balance.yearlyIncome` is added to the bank, and action points reset to `balance.actionsPerTurn`.
+   1. **Year start:** income (`balance.incomePercentOfHouseValue`, 20%, of the house's current value) is added to the bank, and action points reset to `balance.actionsPerTurn`.
    2. **The year's question:** "What would you do?" (phase `quiz`). Upgrades, repairs and selling are locked until it's answered. The answer is recorded in `thisYear.quiz`; it doesn't change the footprint yet.
    3. **Action phase:** apply modifications or repair the house (1 action each), or sell and move (returns to Region select; moving doesn't ask the question again).
    4. **End turn ("Skip Upgrades", or "Finish Upgrades" once an upgrade has been bought that year), then update the carbon footprint:** add this year's change, using the recorded answer.
@@ -237,8 +237,8 @@ Example entry in `quiz.json`:
 
 ## Money and value
 
-- The player starts with `balance.startingBudget`.
-- **Income:** each year starts with `balance.yearlyIncome` added to the bank.
+- The player starts with `balance.startingBudget` ($1,500,000).
+- **Income:** each year starts with `balance.incomePercentOfHouseValue` (20%) of the house's **current** value added to the bank (`yearlyIncome()` in `src/sim/economy.ts`, rounded to whole dollars). Upgrades raise it; unrepaired damage lowers it, so leaving a house damaged also costs income.
   - The core money decision is how to split limited income between preparing (mods) and recovering (repairs).
 - The bank pays for houses, modifications and repairs.
 - **The bank never goes negative.** Disable any action the player can't afford, and say why.
@@ -261,7 +261,7 @@ Example entry in `quiz.json`:
 
 - **House, Roll, YearReview:** the player's house is drawn full screen as the background (`FULL_SCREEN_ART` / `drawBackdrop` in `src/ui/houseArt.ts`). Content sits along the bottom, so the house stays visible above it.
   - House: round "+" markers on the house open upgrade windows, one per zone of the house sprite: door (seal doors, sandbags, store food), foundation (foundation improvement, elevate) and garden (drainage, retaining wall, soil nailing, planting trees, drainage over loose soil). The roof zone has no marker (solar panels are out; open question 4). Each mod's `spot` in `mods.json` decides its marker; positions come from the sprite's measured zones via `spotPositions()` in `houseArt.ts`. Markers have no text label; the spot name and upgrades in place (e.g. "Door upgrades, 1/3 in place") are announced to screen readers on focus. The upgrades open in a compact popover (`openPopover()` in `src/ui/popover.ts`) that grows out of its "+" marker with a tail pointing at it (above the marker if it fits, else below, else beside it; kept on screen); the house isn't dimmed. It's titled "Property Upgrades" (never the zone name), with "You have N upgrade(s) left for this year." below, and lists that spot's mods, each with its icon, price (or why it can't be bought) and a tooltip. A round red × on its top-right corner closes it (`CloseIcon` in `src/ui/closeIcon.ts`, focusable like any button; the × shape carries the meaning, not just the red); so do Escape and clicking outside. It's modal for the keyboard, and reopens in place, without the grow-in, after a purchase. Keep the House view minimal: no text panel, just single-line buttons (no subtext) tiled horizontally and centred along the bottom: "Repair the house" (only while the house is damaged; shown with ✕ if unaffordable, and the reason is announced on focus or click), "Sell and Move" (asks for confirmation first, via `confirmDialog()` in `src/ui/confirm.ts`) and "Skip Upgrades" / "Finish Upgrades" (the label changes once an upgrade is bought that year; either ends the action phase and rolls the weather). Repair cost is in the HUD.
-  - Roll: "One year goes by…" with "You have earned" and, below that, the bank icon and the year's income (e.g. "+$50,000") (income actually arrives at the start of next year, so it's left out when the game ends this year), and a desk calendar (cosmetic, drawn in `src/ui/calendar.ts`) whose pages flip from January to December to show the year passing; no odds, roll numbers or percentages. The same light rain falls every year while it flips, so the weather doesn't give the outcome away. Once it reaches December, a short line beside it (`yearVerdict()` in `copy.ts`): "Unfortunately, a flood hits your home." (naming every disaster that hit), or "You were lucky: there were no climate disasters this year." (never naming the disaster that didn't happen); no ✓/! marks, the words carry the meaning. A hit then plays the designer's flood or landslip animation over the house (see Assets), then the continue button. The HUD and house show the pre-roll state until then, so the result isn't spoiled.
+  - Roll: "One year goes by…" with "You have earned" and, below that, the bank icon and next year's income (e.g. "+$130,000": 20% of the house's value after this year's damage; income actually arrives at the start of next year, so it's left out when the game ends this year), and a desk calendar (cosmetic, drawn in `src/ui/calendar.ts`) whose pages flip from January to December to show the year passing; no odds, roll numbers or percentages. The same light rain falls every year while it flips, so the weather doesn't give the outcome away. Once it reaches December, a short line beside it (`yearVerdict()` in `copy.ts`): "Unfortunately, a flood hits your home." (naming every disaster that hit), or "You were lucky: there were no climate disasters this year." (never naming the disaster that didn't happen); no ✓/! marks, the words carry the meaning. A hit then plays the designer's flood or landslip animation over the house (see Assets), then the continue button. The HUD and house show the pre-roll state until then, so the result isn't spoiled.
   - YearReview: Cause, Effect and What helped boxes side by side. The font shrinks if needed so the dock stays clear of the HUD.
 - **FinalReport:** stats in a left column, footprint chart and quiz choices in a right column, the house (or rubble) between them.
 - **HUD tour:** at the start of each new game (`startNewGame()` / `takeHudTour()` in `session.ts`), RegionSelect first shows four short callouts (`showCoachMarks()` in `src/ui/coachMarks.ts`, text from `hudIntro()` in `copy.ts`), one each for carbon footprint, bank, house value and total repair cost, each pointing at its HUD row. Next / Got it, Skip or Escape. The "Where will you live?" panel appears after it. It doesn't repeat when returning from HouseSelect.
@@ -355,7 +355,7 @@ The odds and damage values above are game-design numbers set by the team. Hazard
 - **Damage:** single mod, stacked mods, reductions past the floor give exactly 10%, no mods gives base damage.
 - **Actions:** a mod costs 1 action, the player can't exceed `actionsPerTurn`, a permanent mod can't be applied twice.
 - **Repairs:** cost 1 action, restore exactly the full value (including upgrades), charge `repairCostRate` × value lost, are unavailable when the house is undamaged or the bank can't cover the cost.
-- **Money:** income is added at year start; no action can take the bank below 0.
+- **Money:** income is added at year start and is `incomePercentOfHouseValue` of the current house value (lower while damaged); no action can take the bank below 0.
 - **Value:** permanent upgrades add their cost to value and full value, consumables add nothing; value never exceeds the full value; selling returns the upgraded value; the house is destroyed exactly when value reaches 0 or below (test 40% × 3 and 10% × 10).
 - **Consumables:** used up only when their disaster hits.
 - **Unrepaired hits:** each hit adds one, a repair resets to 0, a year with no disaster leaves it unchanged.
@@ -374,7 +374,7 @@ Do not invent answers to these. Use the default and leave a `TODO(open-question)
 2. **Missing numbers:**
    - Starting footprint and yearly base increment.
    - Mod dollar costs.
-   - Starting budget, yearly income and house prices.
+   - House prices.
    - Game length N.
    - Defaults: placeholders.
 3. **Selling.** Does selling cost actions?

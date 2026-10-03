@@ -15,7 +15,8 @@ const fullPerDisaster = z.record(disasterSchema, percent);
 
 export const balanceSchema = z.strictObject({
   startingBudget: money,
-  yearlyIncome: money,
+  /** Each year starts with this percentage of the house's current value added to the bank. */
+  incomePercentOfHouseValue: z.number().nonnegative(),
   actionsPerTurn: z.number().int().positive(),
   actionsPerMod: z.number().int().positive(),
   actionsPerRepair: z.number().int().positive(),

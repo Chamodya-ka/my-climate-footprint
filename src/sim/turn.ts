@@ -1,6 +1,6 @@
 import type { GameData } from '../data/schemas';
 import { damageIfHit, valueLostFor } from './damage';
-import { cheapestOtherHouse, repairCost } from './economy';
+import { cheapestOtherHouse, repairCost, yearlyIncome } from './economy';
 import { formatMoney } from './format';
 import { nextFootprint } from './footprint';
 import { seedToState } from './rng';
@@ -51,10 +51,10 @@ export function newGame(data: GameData, seed: number): GameState {
   };
 }
 
-/** Year start: income is added, actions reset, and the year's question comes first. Mutates the (already cloned) state. */
+/** Year start: income (a share of the house's value) is added, actions reset, and the year's question comes first. Mutates the (already cloned) state. */
 function startYear(s: GameState, data: GameData, year: number): void {
   s.year = year;
-  s.bank += data.balance.yearlyIncome;
+  s.bank += yearlyIncome(data, s.house);
   s.actionsLeft = data.balance.actionsPerTurn;
   s.thisYear = emptyYearActions();
   s.phase = 'quiz';

@@ -224,7 +224,7 @@ export interface HudIntroStep {
 
 /** The short tour of the HUD boxes, shown at the start of a new game. */
 export function hudIntro(data: GameData): HudIntroStep[] {
-  const { startingBudget, yearlyIncome, actionsPerRepair } = data.balance;
+  const { startingBudget, incomePercentOfHouseValue, actionsPerRepair } = data.balance;
   return [
     {
       key: 'footprint',
@@ -237,7 +237,7 @@ export function hudIntro(data: GameData): HudIntroStep[] {
       key: 'bank',
       title: 'Bank',
       body:
-        `Your money. You start with ${formatMoney(startingBudget)} and get ${formatMoney(yearlyIncome)} at the start of each year. ` +
+        `Your money. You start with ${formatMoney(startingBudget)}, and each year starts with ${incomePercentOfHouseValue}% of your house's value added. ` +
         `It pays for your house, upgrades and repairs, and can't go below $0.`,
     },
     {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { GameData } from '../data/schemas';
 import type { GameState } from './state';
+import { yearlyIncome } from './economy';
 import { answer, data, dataWith, FLOOD_HOUSE, FLOOD_PRICE, LANDSLIDE_HOUSE, nextYear, startedGame, withHouse } from './testHelpers';
 import {
   answerQuiz,
@@ -43,7 +44,7 @@ describe('buying and year start', () => {
     const price = data.houses.find((h) => h.id === FLOOD_HOUSE)!.price;
     expect(s.year).toBe(1);
     expect(s.phase).toBe('action');
-    expect(s.bank).toBe(data.balance.startingBudget - price + data.balance.yearlyIncome);
+    expect(s.bank).toBe(data.balance.startingBudget - price + (price * data.balance.incomePercentOfHouseValue) / 100);
     expect(s.actionsLeft).toBe(data.balance.actionsPerTurn);
   });
 
@@ -52,8 +53,18 @@ describe('buying and year start', () => {
     const review = playYear(s, neverHits);
     const next = nextYear(review, neverHits);
     expect(next.year).toBe(2);
-    expect(next.bank).toBe(review.bank + data.balance.yearlyIncome);
+    expect(next.bank).toBe(review.bank + yearlyIncome(data, review.house));
     expect(next.actionsLeft).toBe(data.balance.actionsPerTurn);
+  });
+
+  it('income is incomePercentOfHouseValue of the current house value, so damage lowers it', () => {
+    const hit = playYear(startedGame(FLOOD_HOUSE, alwaysHits), alwaysHits);
+    const house = hit.house!;
+    expect(house.value).toBeLessThan(house.fullValue);
+    const next = nextYear(hit, alwaysHits);
+    const income = Math.round((house.value * data.balance.incomePercentOfHouseValue) / 100);
+    expect(next.bank).toBe(hit.bank + income);
+    expect(income).toBeLessThan(Math.round((house.fullValue * data.balance.incomePercentOfHouseValue) / 100));
   });
 
   it('cannot buy a house the bank cannot cover', () => {

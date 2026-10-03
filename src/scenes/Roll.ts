@@ -1,4 +1,5 @@
 import * as Phaser from 'phaser';
+import { yearlyIncome } from '../sim/economy';
 import { formatMoney } from '../sim/format';
 import { getArea, getHouse, type GameState, type YearRecord } from '../sim/state';
 import { data, state } from '../session';
@@ -61,7 +62,8 @@ export class Roll extends Phaser.Scene {
     // Income arrives at the start of next year, so there's none after the last year or a lost house.
     if (!s.outcome) {
       // "You have earned" over the bank icon with the year's income, e.g. "+$50,000".
-      const income = d.balance.yearlyIncome;
+      // Next year's income: a share of the house's value after this year's damage.
+      const income = yearlyIncome(d, s.house);
       const earned = this.add.text(EDGE + 16, heading.y + heading.height + 6, 'You have earned', text.body);
       const rowY = earned.y + earned.height + 32;
       const icon = this.add.image(EDGE + 16, rowY, 'icon-bank').setOrigin(0, 0.5).setScale(INCOME_ICON_SCALE);
