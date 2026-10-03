@@ -5,12 +5,12 @@ import { getArea } from '../sim/state';
 import { buyHouse, checkBuyHouse } from '../sim/turn';
 import { apply, data, state } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
-import { areaHazardLine } from '../ui/copy';
 import { drawHouseScene } from '../ui/houseArt';
 import { getZoomData, pinFor, spriteKey, zoomKey } from '../ui/houseAssets';
 import { drawHUD } from '../ui/HUD';
 import { HouseMarker, rgbToNumber } from '../ui/mapMarkers';
 import { MapView } from '../ui/mapView';
+import { openPopover, type PopoverAnchor } from '../ui/popover';
 import { getRegionMap } from '../ui/regionMap';
 import { colours, FONT, HEIGHT, text, WIDTH } from '../ui/theme';
 
@@ -21,9 +21,14 @@ const BTN_H = 52;
 const BACK_W = 240;
 const TITLE_Y = 70;
 
-const WINDOW_W = 560;
+const WINDOW_W = 520;
+const BUY_W = 280;
+/** Keeps the title clear of the close icon in the corner. */
+const CLOSE_CLEAR = 24;
 const ART_H = 210;
 const WINDOW_DEPTH = 20;
+
+const HALF = 0.5;
 
 const capitalise = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
 
@@ -91,6 +96,7 @@ export class HouseSelect extends Phaser.Scene {
         .map((h) => ({ house: h, pin: pinFor(d, h) }))
         .sort((a, b) => a.pin.x - b.pin.x); // focus order follows the picture, left to right
       for (const { house, pin } of houses) {
+        const spriteH = pin.spriteH * scale;
         const check = checkBuyHouse(s, d, house.id);
         const marker: HouseMarker = new HouseMarker(
           this,
@@ -109,7 +115,16 @@ export class HouseSelect extends Phaser.Scene {
             tint,
           },
           // Unaffordable houses can still be opened, so the window can explain why.
-          { onActivate: () => this.openWindow(house, this.nav.indexOf(marker)) },
+          {
+            onActivate: () =>
+              this.openWindow(house, this.nav.indexOf(marker), {
+                // The sprite's centre and half-size, so the popover's tail stops at its edge.
+                x: marker.x,
+                y: marker.y + spriteH * (HALF - pin.anchorY),
+                rx: (pin.spriteW * scale) / 2,
+                ry: spriteH / 2,
+              }),
+          },
         );
         const alpha = check.ok ? 1 : 0.6;
         marker.setAlpha(0);
@@ -121,61 +136,54 @@ export class HouseSelect extends Phaser.Scene {
     }, 'top');
   }
 
-  /** A modal window with the house's details and a Buy button. */
-  private openWindow(house: House, markerIndex: number): void {
+  /**
+   * A popover growing out of the house, like the upgrade windows: the house's details
+   * and a centred Buy button, with a red × on its top-right corner.
+   */
+  private openWindow(house: House, markerIndex: number, anchor: PopoverAnchor): void {
     const d = data();
     const s = state();
-    const area = getArea(d, house.areaId);
     const check = checkBuyHouse(s, d, house.id);
     this.nav.enabled = false;
 
-    const layer = this.add.container(0, 0).setDepth(WINDOW_DEPTH);
-    const nav = new FocusNav(this);
-    const close = () => {
-      nav.destroy();
-      layer.destroy();
-      this.nav.enabled = true;
-      this.nav.focusIndex(markerIndex);
-    };
-    nav.onCancel = close;
-
-    const blocker = this.add.rectangle(0, 0, WIDTH, HEIGHT, 0x000000, 0.45).setOrigin(0).setInteractive();
-    blocker.on('pointerdown', close);
-    layer.add(blocker);
-
+    // Measure the content first (positions are set once the popover is placed).
     const inner = WINDOW_W - PAD * 2;
-    const x = (WIDTH - WINDOW_W) / 2;
-    const title = this.add.text(0, 0, house.name, { ...text.h2, wordWrap: { width: inner } });
+    const title = this.add.text(0, 0, house.name, { ...text.h2, wordWrap: { width: inner - CLOSE_CLEAR } });
     const facts = this.add.text(
       0,
       0,
-      `${formatMoney(house.price)} · ${capitalise(house.tier)} · ${house.bedrooms} bedrooms · ${house.floorArea} m² · built ${house.built}\n` +
+      `${capitalise(house.tier)} · ${house.bedrooms} bedrooms · ${house.floorArea} m² · built ${house.built}\n` +
         `Floor ${house.floorHeight} m above the ground`,
       { ...text.small, fontSize: '16px', wordWrap: { width: inner } },
     );
-    const details = this.add.text(
-      0,
-      0,
-      `${house.blurb}\n\n${area.name}. ${areaHazardLine(area)}` +
-        (check.ok ? '' : `\n\nUnavailable: ${check.reason}`),
-      { fontFamily: FONT, fontSize: '16px', color: colours.text, lineSpacing: 3, wordWrap: { width: inner } },
-    );
+    const details = this.add.text(0, 0, house.blurb + (check.ok ? '' : `\n\nUnavailable: ${check.reason}`), {
+      fontFamily: FONT,
+      fontSize: '16px',
+      color: colours.text,
+      lineSpacing: 3,
+      wordWrap: { width: inner },
+    });
     const h = PAD + title.height + 4 + facts.height + PAD + ART_H + PAD + details.height + PAD + BTN_H + PAD;
-    const y = Math.max(EDGE, (HEIGHT - h) / 2);
 
-    const win = this.add.rectangle(x, y, WINDOW_W, h, colours.panel).setOrigin(0).setStrokeStyle(3, colours.focus);
-    win.setInteractive(); // swallow clicks so they don't reach the blocker
-    title.setPosition(x + PAD, y + PAD);
-    facts.setPosition(x + PAD, title.y + title.height + 4);
-    const artBox = { x: x + PAD, y: facts.y + facts.height + PAD, w: inner, h: ART_H };
-    layer.add([win, title, facts]);
-    layer.add(drawHouseScene(this, d, house, null, artBox));
-    details.setPosition(x + PAD, artBox.y + ART_H + PAD);
+    const { layer, nav, x0, y0, finish } = openPopover(this, {
+      w: WINDOW_W,
+      h,
+      anchor,
+      depth: WINDOW_DEPTH,
+      closeLabel: `Close ${house.name}`,
+      onClose: () => {
+        this.nav.enabled = true;
+        this.nav.focusIndex(markerIndex);
+      },
+    });
+    title.setPosition(x0 + PAD, y0 + PAD);
+    facts.setPosition(x0 + PAD, title.y + title.height + 4);
+    const artBox = { x: x0 + PAD, y: facts.y + facts.height + PAD, w: inner, h: ART_H };
+    layer.add([title, facts, drawHouseScene(this, d, house, null, artBox)]);
+    details.setPosition(x0 + PAD, artBox.y + ART_H + PAD);
     layer.add(details);
 
-    const bw = (inner - PAD) / 2;
-    const by = y + h - PAD - BTN_H;
-    const buy = new Button(this, x + PAD, by, bw, BTN_H, {
+    const buy = new Button(this, x0 + (WINDOW_W - BUY_W) / 2, y0 + h - PAD - BTN_H, BUY_W, BTN_H, {
       label: `Buy for ${formatMoney(house.price)}`,
       fontSize: 19,
       disabledReason: check.ok ? null : check.reason,
@@ -183,9 +191,10 @@ export class HouseSelect extends Phaser.Scene {
         if (apply(buyHouse(state(), d, house.id))) this.scene.start('House');
       },
     });
-    const closeBtn = new Button(this, x + PAD + bw + PAD, by, bw, BTN_H, { label: 'Close', fontSize: 19, onActivate: close });
-    layer.add([buy, closeBtn]);
-    nav.add(buy, closeBtn);
+    layer.add(buy);
+    nav.add(buy);
+    finish();
+    // The close icon comes after Buy; start there when the house can't be bought.
     nav.focusIndex(check.ok ? 0 : 1);
   }
 }

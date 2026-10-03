@@ -6,15 +6,15 @@ import { answerQuiz, applyMod, checkApplyMod, checkEndTurn, checkRepair, checkSe
 import { apply, data, state } from '../session';
 import { Button, FocusNav, type ButtonOptions } from '../ui/buttons';
 import { modTooltip } from '../ui/copy';
-import { CloseIcon } from '../ui/closeIcon';
 import { confirmDialog } from '../ui/confirm';
 import { drawHUD } from '../ui/HUD';
 import { drawHouseScene, FULL_SCREEN_ART, houseDamageLevel, spotPositions } from '../ui/houseArt';
 import { modIconKey } from '../ui/houseAssets';
 import { createHouseTransition } from '../ui/houseTransitions';
+import { openPopover } from '../ui/popover';
 import { showQuestion } from '../ui/questionDialog';
 import { SpotButton } from '../ui/spots';
-import { colours, HEIGHT, text, WIDTH } from '../ui/theme';
+import { HEIGHT, text, WIDTH } from '../ui/theme';
 
 const EDGE = 16;
 const PAD = 12;
@@ -25,16 +25,11 @@ const WIN_GAP = 6;
 /** Upgrade icon size in the upgrade windows. */
 const ICON = 44;
 
-/** Upgrade popover: width, row height, corner radius, tail length and grow-in time. */
+/** Upgrade popover: width and row height. */
 const POP_W = 440;
 const MOD_BTN_H = 50;
-const RADIUS = 12;
-const TAIL = 14;
-const GROW_MS = 220;
 /** The "+" marker's radius, so the tail stops at its edge. */
 const MARKER_R = 26;
-/** How far in from the popover's corner the close icon's centre sits. */
-const CLOSE_INSET = 4;
 const WINDOW_DEPTH = 20;
 
 interface HouseParams {
@@ -183,22 +178,6 @@ export class HouseScene extends Phaser.Scene {
     const marker = spotPositions(FULL_SCREEN_ART, getHouse(d, house.houseId))[spot];
     this.nav.enabled = false;
 
-    const nav = new FocusNav(this);
-    // Built around the marker, so the popover can grow out of it.
-    const layer = this.add.container(marker.x, marker.y).setDepth(WINDOW_DEPTH);
-    const close = () => {
-      nav.destroy();
-      layer.destroy();
-      blocker.destroy();
-      this.nav.enabled = true;
-      this.nav.focusIndex(markerIndex);
-    };
-    nav.onCancel = close;
-
-    // Clicking anywhere outside the popover closes it. Invisible: the house stays undimmed.
-    const blocker = this.add.rectangle(0, 0, WIDTH, HEIGHT, 0x000000, 0.001).setOrigin(0).setInteractive().setDepth(WINDOW_DEPTH - 1);
-    blocker.on('pointerdown', close);
-
     // Measure the content first (positions are set once the popover is placed).
     const inner = POP_W - PAD * 2;
     const title = this.add.text(0, 0, 'Property Upgrades', text.h2);
@@ -221,40 +200,19 @@ export class HouseScene extends Phaser.Scene {
     const listH = mods.length * (MOD_BTN_H + WIN_GAP) - WIN_GAP;
     const h = PAD + headerH + listH + PAD + infoH + PAD;
 
-    // Place it above the marker if it fits, else below, else beside it; keep it on screen.
-    const reach = MARKER_R + TAIL;
-    let side: 'above' | 'below' | 'left' | 'right';
-    if (marker.y - reach - h >= EDGE) side = 'above';
-    else if (marker.y + reach + h <= HEIGHT - EDGE) side = 'below';
-    else side = marker.x < WIDTH / 2 ? 'right' : 'left';
-    const clampX = (x: number) => Phaser.Math.Clamp(x, EDGE, WIDTH - EDGE - POP_W);
-    const clampY = (y: number) => Phaser.Math.Clamp(y, EDGE, HEIGHT - EDGE - h);
-    const bx =
-      side === 'right' ? marker.x + reach : side === 'left' ? marker.x - reach - POP_W : clampX(marker.x - POP_W / 2);
-    const by = side === 'above' ? marker.y - reach - h : side === 'below' ? marker.y + reach : clampY(marker.y - h / 2);
-    // Everything below is relative to the marker (the layer's origin).
-    const x0 = bx - marker.x;
-    const y0 = by - marker.y;
-
-    const g = this.add.graphics();
-    g.fillStyle(colours.panel).fillRoundedRect(x0, y0, POP_W, h, RADIUS);
-    g.lineStyle(3, colours.focus).strokeRoundedRect(x0, y0, POP_W, h, RADIUS);
-    // The tail, from the popover's edge to the marker.
-    const T = 12;
-    const tip = MARKER_R + 2;
-    const tail =
-      side === 'above'
-        ? [-T, y0 + h - 2, T, y0 + h - 2, 0, -tip]
-        : side === 'below'
-          ? [-T, y0 + 2, T, y0 + 2, 0, tip]
-          : side === 'right'
-            ? [x0 + 2, -T, x0 + 2, T, tip, 0]
-            : [x0 + POP_W - 2, -T, x0 + POP_W - 2, T, -tip, 0];
-    g.fillStyle(colours.panel).fillTriangle(tail[0]!, tail[1]!, tail[2]!, tail[3]!, tail[4]!, tail[5]!);
-    g.lineStyle(3, colours.focus).lineBetween(tail[0]!, tail[1]!, tail[4]!, tail[5]!).lineBetween(tail[4]!, tail[5]!, tail[2]!, tail[3]!);
-    // Swallow clicks on the popover itself so they don't reach the blocker.
-    const hitArea = this.add.rectangle(x0, y0, POP_W, h, 0xffffff, 0.001).setOrigin(0).setInteractive();
-    layer.add([hitArea, g, title, actions, info]);
+    const { layer, nav, x0, y0, finish } = openPopover(this, {
+      w: POP_W,
+      h,
+      anchor: { x: marker.x, y: marker.y, rx: MARKER_R, ry: MARKER_R },
+      depth: WINDOW_DEPTH,
+      closeLabel: 'Close property upgrades',
+      animate,
+      onClose: () => {
+        this.nav.enabled = true;
+        this.nav.focusIndex(markerIndex);
+      },
+    });
+    layer.add([title, actions, info]);
     title.setPosition(x0 + PAD, y0 + PAD);
     actions.setPosition(x0 + PAD, title.y + title.height + 2);
 
@@ -272,6 +230,7 @@ export class HouseScene extends Phaser.Scene {
         label: mod.name,
         detail: status,
         fontSize: 17,
+        align: 'left',
         disabledReason: check.ok ? null : check.reason,
         onFocus: () => info.setText(modTooltip(mod) + (check.ok ? '' : `\nUnavailable: ${check.reason}`)),
         onActivate: () => {
@@ -286,15 +245,7 @@ export class HouseScene extends Phaser.Scene {
     });
     info.setPosition(x0 + PAD, rowY - WIN_GAP + PAD);
 
-    // The red × sits on the top-right corner.
-    const closeIcon = new CloseIcon(this, x0 + POP_W - CLOSE_INSET, y0 + CLOSE_INSET, close, 'Close property upgrades');
-    layer.add(closeIcon);
-    nav.add(closeIcon);
-
-    if (animate) {
-      layer.setScale(0).setAlpha(0);
-      this.tweens.add({ targets: layer, scale: 1, alpha: 1, duration: GROW_MS, ease: 'Back.easeOut' });
-    }
+    finish();
     nav.focusIndex(focusIndex);
   }
 

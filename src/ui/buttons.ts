@@ -12,6 +12,8 @@ export interface ButtonOptions {
   /** Called when focused by keyboard or hovered. */
   onFocus?: () => void;
   fontSize?: number;
+  /** Text alignment; centred unless a list reads better left-aligned (e.g. upgrade rows). */
+  align?: 'left' | 'center';
 }
 
 /** Anything FocusNav can move focus between. */
@@ -29,8 +31,9 @@ const TEXT_PAD = 12;
 const MIN_FONT = 13;
 
 /**
- * A keyboard-focusable button. Focus is shown by a thick outline *and* a ▶
- * marker; unavailable buttons show ✕ and dimmed text, so colour is never the only signal.
+ * A keyboard-focusable button with its text centred (or left-aligned with `align: 'left'`). Focus is shown by a thick outline
+ * (a shape change, not just colour); unavailable buttons show ✕ and dimmed text, so colour
+ * is never the only signal.
  */
 export class Button extends Phaser.GameObjects.Container implements Focusable {
   private readonly bg: Phaser.GameObjects.Rectangle;
@@ -49,22 +52,27 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
   ) {
     super(scene, x, y);
     const size = opts.fontSize ?? 20;
+    const left = opts.align === 'left';
+    const textX = left ? TEXT_PAD : w / 2;
+    const originX = left ? 0 : 0.5;
     this.bg = scene.add.rectangle(0, 0, w, h, colours.button).setOrigin(0);
-    this.labelText = scene.add.text(TEXT_PAD, opts.detail ? 5 : h / 2, '', {
+    this.labelText = scene.add.text(textX, opts.detail ? 5 : h / 2, '', {
       fontFamily: FONT,
       fontSize: `${size}px`,
       color: colours.text,
+      align: opts.align ?? 'center',
       wordWrap: { width: w - TEXT_PAD * 2 },
     });
-    if (!opts.detail) this.labelText.setOrigin(0, 0.5);
-    else this.labelText.setWordWrapWidth(null);
+    if (!opts.detail) this.labelText.setOrigin(originX, 0.5);
+    else this.labelText.setOrigin(originX, 0).setWordWrapWidth(null);
     this.detailText = opts.detail
-      ? scene.add.text(TEXT_PAD, h - 6, opts.detail, {
+      ? scene.add.text(textX, h - 6, opts.detail, {
           fontFamily: FONT,
           fontSize: `${size - 3}px`,
           color: colours.textDim,
+          align: opts.align ?? 'center',
           wordWrap: { width: w - TEXT_PAD * 2 },
-        }).setOrigin(0, 1)
+        }).setOrigin(originX, 1)
       : null;
     this.add([this.bg, this.labelText, ...(this.detailText ? [this.detailText] : [])]);
     this.setSize(w, h);
@@ -125,9 +133,8 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
   }
 
   private refresh(): void {
-    const marker = this.focused ? '▶ ' : '';
     const status = this.disabled ? '✕ ' : '';
-    this.labelText.setText(`${marker}${status}${this.opts.label}`);
+    this.labelText.setText(`${status}${this.opts.label}`);
     if (this.opts.detail) this.fitLabel();
     this.labelText.setColor(this.disabled ? colours.textDisabled : colours.text);
     this.bg.setFillStyle(this.disabled ? colours.buttonDisabled : colours.button);
