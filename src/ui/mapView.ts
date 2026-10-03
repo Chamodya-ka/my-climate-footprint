@@ -53,9 +53,15 @@ export class MapView {
       this.coverScale,
       MAX_ZOOM,
     );
-    // Centre the region in the viewport, but never show past the map's edges.
-    const x = Phaser.Math.Clamp(viewport.x + viewport.w / 2 - (bb.x + bb.w / 2) * s, WIDTH - m.width * s, 0);
-    const y = Phaser.Math.Clamp(viewport.y + viewport.h / 2 - (bb.y + bb.h / 2) * s, HEIGHT - m.height * s, 0);
+    // Centre the region in the viewport. Prefer keeping the whole screen covered by the map;
+    // if that would push part of the region outside the viewport (e.g. under a side panel),
+    // only keep the viewport covered and let the map run out behind the panel.
+    const cx = viewport.x + viewport.w / 2 - (bb.x + bb.w / 2) * s;
+    const cy = viewport.y + viewport.h / 2 - (bb.y + bb.h / 2) * s;
+    const fits = (x: number) => x + bb.x * s >= viewport.x && x + (bb.x + bb.w) * s <= viewport.x + viewport.w;
+    const coverX = Phaser.Math.Clamp(cx, WIDTH - m.width * s, 0);
+    const x = fits(coverX) ? coverX : Phaser.Math.Clamp(cx, viewport.x + viewport.w - m.width * s, viewport.x);
+    const y = Phaser.Math.Clamp(cy, HEIGHT - m.height * s, 0);
     this.scene.tweens.add({
       targets: this.layer,
       scale: s,

@@ -43,7 +43,7 @@
     {
       "id": "slope-house",
       "areaId": "ridge-hillside",
-      "map": { "x": 980, "y": 400 },
+      "map": { "x": 950, "y": 355 },
       "name": "House near a slope",
       "style": "hillside",
       "price": 650000,

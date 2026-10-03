@@ -8,12 +8,15 @@ import { RegionLabel, rgbToNumber } from '../ui/mapMarkers';
 import { MapView } from '../ui/mapView';
 import { panel } from '../ui/panels';
 import { getRegionMap } from '../ui/regionMap';
+import { drawHUD } from '../ui/HUD';
 import { colours, FONT, text, WIDTH } from '../ui/theme';
 
 const EDGE = 16;
 const PAD = 16;
-/** The info panel sits over the mountains in the top-right corner, clear of every region. */
+/** The info panel sits over the mountains in the top-right corner, below the HUD's money box. */
 const PANEL_W = 370;
+/** Space between the HUD's top-right box and the info panel. */
+const GAP = 12;
 
 /** The valley map: hover a region to read about it, click it (or its label) to see its houses. */
 export class RegionSelect extends Phaser.Scene {
@@ -26,19 +29,21 @@ export class RegionSelect extends Phaser.Scene {
     const s = state();
     const m = getRegionMap();
     const map = new MapView(this);
+    const hud = drawHUD(this, d, s);
+    const top = hud.rightBottom + GAP;
 
-    // Info panel: heading, money, then details of the region under the pointer or focus.
+    // Info panel: heading, then details of the region under the pointer or focus.
     const px = WIDTH - EDGE - PANEL_W;
     const inner = PANEL_W - PAD * 2;
     const move = s.thisYear.move;
-    const title = this.add.text(px + PAD, EDGE + PAD, move ? 'Where will you move?' : 'Where will you live?', text.h2);
+    const title = this.add.text(px + PAD, top + PAD, move ? 'Where will you move?' : 'Where will you live?', text.h2);
     const sub = this.add.text(
       px + PAD,
       title.y + title.height + 4,
       move
         ? `You sold the ${getHouse(d, move.fromHouseId).name.toLowerCase()} for ${formatMoney(move.saleValue)}. ` +
-            `You have ${formatMoney(s.bank)}. Moving uses the rest of this year.`
-        : `You have ${formatMoney(s.bank)}. Where you live decides which hazards you face.`,
+            `Moving uses the rest of this year.`
+        : `Where you live decides which hazards you face.`,
       { ...text.small, fontSize: '16px', wordWrap: { width: inner } },
     );
     const info = this.add.text(px + PAD, sub.y + sub.height + 12, 'Choose a region on the map.', {
@@ -48,8 +53,8 @@ export class RegionSelect extends Phaser.Scene {
       lineSpacing: 3,
       wordWrap: { width: inner },
     });
-    const bg = panel(this, px, EDGE, PANEL_W, 10).setDepth(-1).setAlpha(0.95);
-    const fitPanel = () => bg.setSize(PANEL_W, info.y + info.height + PAD - EDGE);
+    const bg = panel(this, px, top, PANEL_W, 10).setDepth(-1).setAlpha(0.95);
+    const fitPanel = () => bg.setSize(PANEL_W, info.y + info.height + PAD - top);
     fitPanel();
 
     const select = (regionId: string) => this.scene.start('HouseSelect', { regionId });

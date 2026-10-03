@@ -48,7 +48,9 @@ export function installDevtools(game: Phaser.Game): void {
   const button = (pred: (label: string) => boolean): Button | undefined => {
     const scene = game.scene.getScenes(true)[0];
     const all = scene?.children.list.flatMap((o) => ('list' in o ? [o, ...(o as Phaser.GameObjects.Container).list] : [o]));
-    return all?.find((o) => 'opts' in o && pred((o as Button).opts.label)) as Button | undefined;
+    // Buttons have opts.label; map labels and house pins have a title.
+    const labelOf = (o: object) => (o as Button).opts?.label ?? (o as { title?: string }).title;
+    return all?.find((o) => 'opts' in o && labelOf(o) !== undefined && pred(labelOf(o)!)) as Button | undefined;
   };
   const click = async (pred: (label: string) => boolean, ms = 8000) => {
     const t = Date.now();
@@ -70,8 +72,12 @@ export function installDevtools(game: Phaser.Game): void {
       await waitFor('RegionSelect');
       await click((l) => l === session.data().regions[regionIndex]!.name);
       await waitFor('HouseSelect');
-      for (let i = 0; i < houseIndex; i++) press('ArrowDown');
-      press('Enter');
+      const region = session.data().regions[regionIndex]!;
+      const houses = session.data().houses.filter(
+        (h) => session.data().areas.find((a) => a.id === h.areaId)?.regionId === region.id,
+      );
+      await click((l) => l === houses[houseIndex]!.name); // waits for the pins to drop in
+      await click((l) => l.startsWith('Buy for'));
       return waitFor('House');
     },
     /** Ends the year with the given quiz answer. Stops on the Roll scene if `stopAtRoll`. */

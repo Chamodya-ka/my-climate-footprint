@@ -51,9 +51,10 @@ src/
   sim/        state.ts, turn.ts, weather.ts, damage.ts, footprint.ts, economy.ts, rng.ts,
               advice.ts (what helped / would have helped), format.ts, *.test.ts
   scenes/     Boot, Title, RegionSelect, HouseSelect, House, Quiz, Roll, YearReview, FinalReport
-  ui/         HUD, buttons (Button + FocusNav), panels, houseArt, copy, theme, a11y
+  ui/         HUD, buttons (Button + FocusNav), panels, houseArt, copy, theme, a11y, icons, spots,
+              regionMap + mapView + mapMarkers (the valley map)
   data/       areas.json, houses.json, weather.json, mods.json, quiz.json, balance.json, schemas.ts, index.ts
-assets/       sprites, audio, LICENSES.md
+assets/       map (valley map art + cartoon2.py), sprites, audio, LICENSES.md
 tools/blender/house_sprites.py   (placeholder; houses are drawn in code for now)
 ```
 
@@ -240,10 +241,10 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
   - Selling plus buying uses the whole turn (default, pending open question 3). After moving, actions are 0 and the player can't sell again that year.
   - The player can't buy back the house they just sold.
   - Only allow selling if the bank plus the sale value can afford at least one other house. Otherwise the player could end up homeless, a state the game has no rules for.
-- **HUD** (`src/ui/HUD.ts`, shown on the House, Quiz, Roll and YearReview screens):
+- **HUD** (`src/ui/HUD.ts`, shown on the RegionSelect, HouseSelect, House, Quiz, Roll and YearReview screens):
   - Top left box: neighbourhood footprint.
-  - Top centre, no box: "Year N of M" in large white text with a dark outline.
-  - Top right box: bank, house value (current dollar value only), total repair cost (the cost to repair the house fully right now; $0 when undamaged).
+  - Top centre, no box: "Year N of M" in large white text with a dark outline. Hidden in year 0 (before the first house is bought).
+  - Top right box: bank, house value (current dollar value only), total repair cost (the cost to repair the house fully right now; $0 when undamaged). With no house (choosing or moving), just the bank. `drawHUD()` returns the box's bottom edge (`rightBottom`) so side panels can sit below it.
   - Not in the HUD: odds (shown in the Roll panel and year review), actions left (in upgrade windows only), damage if hit and hits left (year review only).
 
 ## Screen layout
@@ -254,7 +255,9 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
   - Roll: the year's odds, one die per disaster, then the continue button. The HUD and house show the pre-roll state until the dice land, so the result isn't spoiled.
   - YearReview: Cause, Effect and What helped boxes side by side. The font shrinks if needed so the dock stays clear of the HUD.
 - **FinalReport:** stats in a left column, footprint chart and quiz choices in a right column, the house (or rubble) between them.
-- **Title, RegionSelect, HouseSelect:** plain dark background with panels.
+- **RegionSelect:** the valley map (`assets/map`) fills the screen. Each region has a label (name and hazards, drawn from game data, not the labels baked into `cartoon_regions.png`). Hovering anywhere in a region highlights it and fills the info panel in the top-right corner, below the HUD's bank box; clicking anywhere in it, or its label, selects it.
+- **HouseSelect:** the map zooms to fit the chosen region left of a solid right-hand sidebar (bank box, then the house panel), then a pin drops in for each house (`houses.json` `map.x/y`, in map-image pixels). Choosing a pin shows a preview, details and "Buy for $X"; "Back to the map" returns to RegionSelect.
+- **Title:** plain dark background.
 
 ## Content and tone
 
@@ -271,6 +274,14 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
   - Only pointer movement moves focus, so a resting mouse can't steal keyboard focus when a screen opens.
   - Focused text is mirrored to an aria-live region (`#sr-live`) for screen readers.
   - Text is readable at small sizes.
+
+## Map
+
+- `assets/map/cartoon_base.png` (art) and `cartoon_overlay.png` (region outlines; each region filled with its `tint`) are 1600×1000. `region_labels.json` gives each map region's label position and tint.
+- `areas.json` regions name their map shape with `mapRegion` (`coastal`, `riverside`, `hillysides`).
+- At boot, `buildRegionMap()` (`src/ui/regionMap.ts`) classifies every overlay pixel by nearest tint into a hit-test lookup, builds a highlight texture and bounding box per region, and fails loudly if a `mapRegion` is unknown or a house pin isn't inside its own region.
+- `MapView` (`src/ui/mapView.ts`) draws the map (cover-fit), zooms to a region and converts screen ↔ map pixels. Map labels and pins are in `src/ui/mapMarkers.ts`.
+- `assets/map/cartoon2.py` regenerates the map. It reads `terrain.npz` and `regions_mask.png`, which aren't in the repo, and has hard-coded output paths.
 
 ## Phaser 4 notes
 

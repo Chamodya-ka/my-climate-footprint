@@ -11,6 +11,7 @@ import { HousePin, rgbToNumber } from '../ui/mapMarkers';
 import { MapView } from '../ui/mapView';
 import { panel } from '../ui/panels';
 import { getRegionMap } from '../ui/regionMap';
+import { drawHUD } from '../ui/HUD';
 import { colours, FONT, HEIGHT, text, WIDTH } from '../ui/theme';
 
 const EDGE = 16;
@@ -19,6 +20,8 @@ const PANEL_W = 380;
 const ART_H = 170;
 const BTN_H = 52;
 const GAP = 10;
+/** Space between the HUD's top-right box and the panel. */
+const HUD_GAP = 12;
 
 /** Zooms into the chosen region, with a pin for each house and a panel to buy one. */
 export class HouseSelect extends Phaser.Scene {
@@ -40,17 +43,17 @@ export class HouseSelect extends Phaser.Scene {
     const tint = rgbToNumber(m.labels.regions[region.mapRegion]!.tint);
     const map = new MapView(this);
     map.highlight(region.mapRegion);
+    const hud = drawHUD(this, d, s);
+    const top = hud.rightBottom + HUD_GAP;
 
     // Right-hand panel: heading, a preview of the chosen house, its details, Buy and Back.
     const px = WIDTH - EDGE - PANEL_W;
+    // A solid sidebar behind the money box and panel, so the zoomed map always ends cleanly.
+    this.add.rectangle(px - EDGE, 0, WIDTH - px + EDGE, HEIGHT, colours.bg).setOrigin(0).setDepth(-5);
     const inner = PANEL_W - PAD * 2;
-    panel(this, px, EDGE, PANEL_W, HEIGHT - EDGE * 2).setAlpha(0.96);
-    const title = this.add.text(px + PAD, EDGE + PAD, `${region.name}: choose a house`, text.h2);
-    const money = this.add.text(px + PAD, title.y + title.height + 4, `You have ${formatMoney(s.bank)}.`, {
-      ...text.small,
-      fontSize: '16px',
-    });
-    const artBox = { x: px + PAD, y: money.y + money.height + 12, w: inner, h: ART_H };
+    panel(this, px, top, PANEL_W, HEIGHT - EDGE - top).setAlpha(0.96);
+    const title = this.add.text(px + PAD, top + PAD, `${region.name}: choose a house`, text.h2);
+    const artBox = { x: px + PAD, y: title.y + title.height + 12, w: inner, h: ART_H };
     let art: Phaser.GameObjects.Container | null = null;
     const details = this.add.text(px + PAD, artBox.y + ART_H + 12, 'Choose a house on the map.', {
       fontFamily: FONT,
@@ -98,7 +101,7 @@ export class HouseSelect extends Phaser.Scene {
 
     const houses = d.houses.filter((h) => getArea(d, h.areaId).regionId === region.id);
     // Pins appear once the zoom settles, so they land exactly on their spots.
-    map.zoomToRegion(region.mapRegion, { x: 0, y: 0, w: px, h: HEIGHT }, () => {
+    map.zoomToRegion(region.mapRegion, { x: 0, y: 0, w: px - EDGE, h: HEIGHT }, () => {
       for (const house of houses) {
         const check = checkBuyHouse(s, d, house.id);
         const at = map.toScreen(house.map.x, house.map.y);

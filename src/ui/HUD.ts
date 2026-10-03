@@ -25,7 +25,7 @@ interface Row {
  * A box of rows, each an icon beside a small label and a bold value.
  * The box is only as wide as its widest row; `align` pins it to the left or right edge.
  */
-function box(scene: Phaser.Scene, c: Phaser.GameObjects.Container, align: 'left' | 'right', rows: Row[]): void {
+function box(scene: Phaser.Scene, c: Phaser.GameObjects.Container, align: 'left' | 'right', rows: Row[]): number {
   const items = rows.map((row) => ({
     icon: scene.add.image(0, 0, row.icon).setOrigin(0, 0.5),
     label: scene.add.text(0, 0, row.label.toUpperCase(), { fontFamily: FONT, fontSize: '13px', color: colours.textDim }),
@@ -46,21 +46,29 @@ function box(scene: Phaser.Scene, c: Phaser.GameObjects.Container, align: 'left'
     c.add([it.icon, it.label, it.value]);
     y += rowH + ROW_GAP;
   }
-  bg.setSize(w, y - ROW_GAP - EDGE + PAD);
+  const h = y - ROW_GAP - EDGE + PAD;
+  bg.setSize(w, h);
+  return EDGE + h;
 }
 
 /**
  * Top left: the neighbourhood footprint. Top centre: the year, as big text.
  * Top right: bank, house value, total repair cost.
  */
-export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState): Phaser.GameObjects.Container {
+export interface Hud extends Phaser.GameObjects.Container {
+  /** Bottom edge of the top-right box, so side panels can sit below it. */
+  rightBottom: number;
+}
+
+export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState): Hud {
   const c = scene.add.container(0, 0).setDepth(10);
   const house = state.house;
 
   box(scene, c, 'left', [{ icon: 'icon-footprint', label: 'Neighbourhood footprint', value: formatTonnes(state.footprint) }]);
 
   // Year: big white text at the top centre, outlined so it reads over the sky.
-  c.add(
+  // Hidden before the first house is bought (year 0).
+  if (state.year > 0) c.add(
     scene.add
       .text(WIDTH / 2, EDGE + 4, `Year ${state.year} of ${data.balance.gameLengthYears}`, {
         fontFamily: FONT,
@@ -78,6 +86,6 @@ export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState): 
     right.push({ icon: 'icon-house', label: 'House value', value: formatMoney(house.value) });
     right.push({ icon: 'icon-repair', label: 'Total repair cost', value: formatMoney(repairCost(data, house)) });
   }
-  box(scene, c, 'right', right);
-  return c;
+  const rightBottom = box(scene, c, 'right', right);
+  return Object.assign(c, { rightBottom });
 }
