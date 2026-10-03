@@ -76,7 +76,7 @@ describe("Rimu's lines around the question", () => {
     const fresh = startedGame();
     expect(kiwiAfterQuestion(fresh)).toBe("Now let's see how you could upgrade your house to handle climate hazards.");
     const damaged = { ...fresh, house: { ...fresh.house!, value: fresh.house!.value - 1 } };
-    expect(kiwiAfterQuestion(damaged)).toMatch(/^Your house is damaged\. Now repair it/);
+    expect(kiwiAfterQuestion(damaged)).toMatch(/^Your house is damaged\. You can repair it/);
   });
 });
 
@@ -224,7 +224,7 @@ describe("Rimu's tips on the House screen", () => {
   it('explains the upgrade buttons and the yearly upgrade limit from the game data', () => {
     const tip = kiwiUpgradeTip(data);
     expect(tip).toContain('upgrade buttons');
-    expect(tip).toContain(`only do ${data.balance.actionsPerTurn / data.balance.actionsPerMod} each year`);
+    expect(tip).toContain(`only add ${data.balance.actionsPerTurn / data.balance.actionsPerMod} each year`);
     short(tip);
   });
 

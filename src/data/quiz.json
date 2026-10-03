@@ -398,7 +398,7 @@
           "id": "more-diesel",
           "label": "More diesel trucks for the growth",
           "footprintDelta": 0.5,
-          "explanation": "More diesel machines means more fuel burned every shift."
+          "explanation": "More diesel machines mean more fuel burned every shift."
         },
         {
           "id": "electrify",
@@ -436,7 +436,7 @@
           "id": "more-generators",
           "label": "Hire extra diesel generators",
           "footprintDelta": 0.5,
-          "explanation": "More generators means more diesel burned for the whole project."
+          "explanation": "More generators mean more diesel burned for the whole project."
         },
         {
           "id": "same-kit",

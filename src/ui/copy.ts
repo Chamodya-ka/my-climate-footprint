@@ -294,19 +294,19 @@ export function kiwiBeforeQuestion(state: GameState): string {
 export function kiwiAfterQuestion(state: GameState): string {
   const house = state.house;
   return house && house.value < house.fullValue
-    ? 'Your house is damaged. Now repair it, or upgrade it to handle the next climate hazard.'
+    ? 'Your house is damaged. You can repair it, and upgrade it for the next climate hazard.'
     : "Now let's see how you could upgrade your house to handle climate hazards.";
 }
 
 /** Rimu's one-off tip about the "+" buttons, the first time the upgrades unlock. Short sentences. */
 export function kiwiUpgradeTip(data: GameData): string {
   const perYear = Math.floor(data.balance.actionsPerTurn / data.balance.actionsPerMod);
-  return `See these upgrade buttons? Upgrades protect your house from climate hazards. You can only do ${perYear} each year.`;
+  return `See these upgrade buttons? Upgrades protect your house from climate hazards. You can only add ${perYear} each year.`;
 }
 
 /** Rimu's one-off tip about the two year-end buttons, after the player's first upgrade. Short sentences. */
 export function kiwiYearEndTip(): string {
   return (
-    'Nice work! Now you have either continue upgrading or finish upgrades for this year. You can also sell your house and move to a different place.'
+    'Nice work! Now you can either continue upgrading or finish upgrades for this year. You can also sell your house and move to a different place.'
   );
 }
