@@ -115,42 +115,82 @@ export class RegionLabel extends MapMarker {
   }
 }
 
-/** A house pin on the map: a round badge with a house icon and the house's name. */
-export class HousePin extends MapMarker {
-  private readonly badge: Phaser.GameObjects.Arc;
-  private readonly tag: Phaser.GameObjects.Text;
+export interface HouseMarkerLook {
+  /** Texture key of the house sprite. */
+  texture: string;
+  /** Sprite display size and anchor, in screen pixels. */
+  w: number;
+  h: number;
+  anchorY: number;
+  /** Top of the drawn part of the sprite, as a fraction of its height (for placing the tag). */
+  contentTop: number;
+  tagBelow: boolean;
+  price: string;
+  tier: string;
+  tint: number;
+}
+
+/**
+ * A house on the zoomed region view: its sprite plus a price tag ("$595k / Standard").
+ * Focus outlines the tag, adds a ▶ and enlarges the marker.
+ */
+export class HouseMarker extends MapMarker {
+  private readonly tagBg: Phaser.GameObjects.Graphics;
+  private readonly priceText: Phaser.GameObjects.Text;
+  private readonly tagW: number;
+  private readonly tagH: number;
+  private readonly tagY: number;
 
   constructor(
     scene: Phaser.Scene,
     x: number,
     y: number,
-    private readonly title: string,
-    private readonly tint: number,
+    readonly title: string,
+    private readonly look: HouseMarkerLook,
     opts: MarkerOptions,
   ) {
     super(scene, x, y, opts);
-    const R = 24;
-    const shadow = scene.add.ellipse(0, R + 4, R * 1.6, 10, 0x000000, 0.25);
-    const stem = scene.add.triangle(0, R - 2, -10, 0, 10, 0, 0, 16, 0xffffff).setOrigin(0.5, 0);
-    this.badge = scene.add.circle(0, 0, R, 0xffffff);
-    const icon = scene.add.image(0, 0, 'icon-house');
-    this.tag = scene.add
-      .text(0, R + 20, '', { fontFamily: FONT, fontSize: '16px', color: INK, backgroundColor: '#ffffffee', padding: { x: 6, y: 3 } })
-      .setOrigin(0.5, 0);
-    this.add([shadow, stem, this.badge, icon, this.tag]);
-    this.wire(this.badge);
+    const sprite = scene.add.image(0, 0, look.texture).setOrigin(0.5, look.anchorY).setDisplaySize(look.w, look.h);
+    this.priceText = scene.add.text(0, 0, '', { fontFamily: FONT, fontSize: '22px', color: INK, fontStyle: 'bold' }).setOrigin(0.5, 0);
+    const tierText = scene.add.text(0, 0, look.tier, { fontFamily: FONT, fontSize: '14px', color: INK_DIM }).setOrigin(0.5, 0);
+    this.priceText.setText(`▶ ✕ ${look.price}`); // measure with markers so the tag doesn't resize
+    this.tagW = Math.max(this.priceText.width, tierText.width) + 24;
+    this.tagH = this.priceText.height + tierText.height + 10;
+    const spriteTop = -look.h * (look.anchorY - look.contentTop);
+    const ARROW = 10;
+    this.tagY = look.tagBelow ? look.h * (1 - look.anchorY) + ARROW : spriteTop - ARROW - this.tagH;
+    this.priceText.setY(this.tagY + 4);
+    tierText.setY(this.priceText.y + this.priceText.height);
+    this.tagBg = scene.add.graphics();
+    const hit = scene.add.rectangle(0, 0, Math.max(look.w, this.tagW), 10, 0xffffff, 0.001);
+    // Clickable area spans the tag and the sprite.
+    const top = Math.min(this.tagY, spriteTop);
+    const bottom = Math.max(this.tagY + this.tagH, look.h * (1 - look.anchorY));
+    hit.setPosition(0, (top + bottom) / 2).setSize(Math.max(look.w, this.tagW), bottom - top);
+    this.add([sprite, this.tagBg, this.priceText, tierText, hit]);
+    this.wire(hit);
     this.setDepth(6);
     this.refresh();
     scene.add.existing(this);
   }
 
   describe(): string {
-    return this.disabled ? `${this.title}. Unavailable: ${this.opts.disabledReason}` : this.title;
+    const base = `${this.title}, ${this.look.price}, ${this.look.tier}`;
+    return this.disabled ? `${base}. Unavailable: ${this.opts.disabledReason}` : base;
   }
 
   protected refresh(): void {
-    this.badge.setStrokeStyle(this.focused ? 6 : 4, this.focused ? colours.focus : this.tint);
+    const { tagW: w, tagH: h, tagY: y } = this;
+    const g = this.tagBg;
+    g.clear();
+    g.fillStyle(0x283c5a, 0.3).fillRoundedRect(-w / 2, y + 3, w, h, 10);
+    g.fillStyle(0xffffff).fillRoundedRect(-w / 2, y, w, h, 10);
+    g.lineStyle(this.focused ? 5 : 3, this.focused ? colours.focus : this.look.tint).strokeRoundedRect(-w / 2, y, w, h, 10);
+    // Pointer from the tag to the house.
+    const tip = this.look.tagBelow ? y - 9 : y + h + 9;
+    const base = this.look.tagBelow ? y : y + h;
+    g.fillStyle(0xffffff).fillTriangle(-8, base, 8, base, 0, tip);
     this.setAlpha(this.disabled ? 0.6 : 1);
-    this.tag.setText(`${this.focused ? '▶ ' : ''}${this.disabled ? '✕ ' : ''}${this.title}`);
+    this.priceText.setText(`${this.focused ? '▶ ' : ''}${this.disabled ? '✕ ' : ''}${this.look.price}`);
   }
 }

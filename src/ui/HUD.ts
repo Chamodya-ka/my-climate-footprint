@@ -4,6 +4,7 @@ import { formatMoney, formatTonnes } from '../sim/format';
 import { repairCost } from '../sim/economy';
 import { type GameState } from '../sim/state';
 import { ICON_SIZE, type IconKey } from './icons';
+import { calendarYear } from './copy';
 import { colours, FONT, WIDTH } from './theme';
 
 const PAD = 14;
@@ -15,7 +16,10 @@ const MIN_W = 180;
 /** Content in scenes using the HUD should start below this. */
 export const HUD_HEIGHT = 190;
 
+export type HudRowKey = 'footprint' | 'bank' | 'houseValue' | 'repairCost';
+
 interface Row {
+  key: HudRowKey;
   icon: IconKey;
   label: string;
   value: string;
@@ -25,7 +29,13 @@ interface Row {
  * A box of rows, each an icon beside a small label and a bold value.
  * The box is only as wide as its widest row; `align` pins it to the left or right edge.
  */
-function box(scene: Phaser.Scene, c: Phaser.GameObjects.Container, align: 'left' | 'right', rows: Row[]): number {
+function box(
+  scene: Phaser.Scene,
+  c: Phaser.GameObjects.Container,
+  align: 'left' | 'right',
+  rows: Row[],
+  rowRects: Partial<Record<HudRowKey, BoxRect>>,
+): BoxRect {
   const items = rows.map((row) => ({
     icon: scene.add.image(0, 0, row.icon).setOrigin(0, 0.5),
     label: scene.add.text(0, 0, row.label.toUpperCase(), { fontFamily: FONT, fontSize: '13px', color: colours.textDim }),
@@ -38,39 +48,58 @@ function box(scene: Phaser.Scene, c: Phaser.GameObjects.Container, align: 'left'
   const bg = scene.add.rectangle(x, EDGE, w, 10, colours.panel, 0.92).setOrigin(0).setStrokeStyle(2, colours.panelEdge);
   c.add(bg);
   let y = EDGE + PAD - 2;
-  for (const it of items) {
+  items.forEach((it, i) => {
     const rowH = Math.max(ICON_SIZE, it.label.height + it.value.height);
+    rowRects[rows[i]!.key] = { x: x + PAD / 2, y: y - ROW_GAP / 2, w: w - PAD, h: rowH + ROW_GAP };
     it.icon.setPosition(x + PAD, y + rowH / 2);
     it.label.setPosition(x + PAD + ICON_SIZE + ICON_GAP, y);
     it.value.setPosition(x + PAD + ICON_SIZE + ICON_GAP, y + it.label.height);
     c.add([it.icon, it.label, it.value]);
     y += rowH + ROW_GAP;
-  }
+  });
   const h = y - ROW_GAP - EDGE + PAD;
   bg.setSize(w, h);
-  return EDGE + h;
+  return { x, y: EDGE, w, h };
 }
 
 /**
  * Top left: the neighbourhood footprint. Top centre: the year, as big text.
  * Top right: bank, house value, total repair cost.
  */
+export interface BoxRect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+
 export interface Hud extends Phaser.GameObjects.Container {
   /** Bottom edge of the top-right box, so side panels can sit below it. */
   rightBottom: number;
+  /** The neighbourhood footprint box (top left). */
+  footprintBox: BoxRect;
+  /** Each row of the boxes, e.g. for pointing explanations at them. */
+  rows: Record<HudRowKey, BoxRect>;
 }
 
 export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState): Hud {
   const c = scene.add.container(0, 0).setDepth(10);
   const house = state.house;
 
-  box(scene, c, 'left', [{ icon: 'icon-footprint', label: 'Neighbourhood footprint', value: formatTonnes(state.footprint) }]);
+  const rows: Partial<Record<HudRowKey, BoxRect>> = {};
+  const footprintBox = box(
+    scene,
+    c,
+    'left',
+    [{ key: 'footprint', icon: 'icon-footprint', label: 'Neighbourhood footprint', value: formatTonnes(state.footprint) }],
+    rows,
+  );
 
-  // Year: big white text at the top centre, outlined so it reads over the sky.
+  // The calendar year: big white text at the top centre, outlined so it reads over the sky.
   // Hidden before the first house is bought (year 0).
   if (state.year > 0) c.add(
     scene.add
-      .text(WIDTH / 2, EDGE + 4, `Year ${state.year} of ${data.balance.gameLengthYears}`, {
+      .text(WIDTH / 2, EDGE + 4, `${calendarYear(data, state.year)}`, {
         fontFamily: FONT,
         fontSize: '40px',
         color: '#ffffff',
@@ -81,11 +110,17 @@ export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState): 
       .setOrigin(0.5, 0),
   );
 
-  const right: Row[] = [{ icon: 'icon-bank', label: 'Bank', value: formatMoney(state.bank) }];
-  if (house) {
-    right.push({ icon: 'icon-house', label: 'House value', value: formatMoney(house.value) });
-    right.push({ icon: 'icon-repair', label: 'Total repair cost', value: formatMoney(repairCost(data, house)) });
-  }
-  const rightBottom = box(scene, c, 'right', right);
-  return Object.assign(c, { rightBottom });
+  // House value and repair cost show $0 before a house is bought, so the box never changes shape.
+  const right: Row[] = [
+    { key: 'bank', icon: 'icon-bank', label: 'Bank', value: formatMoney(state.bank) },
+    { key: 'houseValue', icon: 'icon-house', label: 'House value', value: formatMoney(house?.value ?? 0) },
+    {
+      key: 'repairCost',
+      icon: 'icon-repair',
+      label: 'Total repair cost',
+      value: formatMoney(house ? repairCost(data, house) : 0),
+    },
+  ];
+  const r = box(scene, c, 'right', right, rows);
+  return Object.assign(c, { rightBottom: r.y + r.h, footprintBox, rows: rows as Record<HudRowKey, BoxRect> });
 }

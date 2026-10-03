@@ -3,10 +3,10 @@ import type { Area, Disaster, GameData, House, Mod, QuizQuestion } from '../data
 export type Phase =
   /** Picking a house: at game start, or after selling. */
   | 'choosingHouse'
+  /** Answering this year's "What would you do?" question, before any actions. */
+  | 'quiz'
   /** Spending actions on mods, repairs, or selling. */
   | 'action'
-  /** Answering this year's "What would you do?" question. */
-  | 'quiz'
   /** The weather has been rolled; the year review is showing. */
   | 'review'
   /** The game has ended; see `outcome`. */
@@ -16,8 +16,13 @@ export type Outcome = 'won' | 'lost';
 
 export interface HouseState {
   houseId: string;
-  /** Purchase price. House value never rises above this. */
-  originalValue: number;
+  /** What the house paid when bought. Never changes. */
+  purchasePrice: number;
+  /**
+   * The house's undamaged value: purchase price plus the cost of every permanent
+   * upgrade built. Damage is a share of it, repairs restore it, and value never exceeds it.
+   */
+  fullValue: number;
   value: number;
   /** Permanent mod ids, each at most once. */
   permanentMods: string[];
@@ -58,6 +63,8 @@ export interface MoveRecord {
 
 /** What the player did during this year's action phase. */
 export interface YearActions {
+  /** This year's quiz answer, given at the start of the year; applied to the footprint at year end. */
+  quiz: QuizChoice | null;
   modsBuilt: string[];
   repairs: { cost: number; valueRestored: number }[];
   move: MoveRecord | null;
@@ -109,7 +116,7 @@ export function fail(reason: string): { ok: false; reason: string } {
 }
 
 export function emptyYearActions(): YearActions {
-  return { modsBuilt: [], repairs: [], move: null };
+  return { quiz: null, modsBuilt: [], repairs: [], move: null };
 }
 
 function byId<T extends { id: string }>(items: T[], id: string, kind: string): T {

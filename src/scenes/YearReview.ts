@@ -4,7 +4,7 @@ import { continueAfterReview } from '../sim/turn';
 import { apply, data, state } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
-import { yearReview } from '../ui/copy';
+import { calendarYear, yearReview } from '../ui/copy';
 import { drawHUD, HUD_HEIGHT } from '../ui/HUD';
 import { drawBackdrop } from '../ui/houseArt';
 import { panel } from '../ui/panels';
@@ -62,7 +62,7 @@ export class YearReview extends Phaser.Scene {
     const dockY = HEIGHT - EDGE - dockH;
     panel(this, EDGE, dockY, dockW, dockH).setDepth(-2);
 
-    const heading = `Year ${rec.year} review: ${rec.destroyed ? 'the house was destroyed' : hit ? 'disaster struck' : 'a quiet year'}`;
+    const heading = `${calendarYear(d, rec.year)} review: ${rec.destroyed ? 'the house was destroyed' : hit ? 'disaster struck' : 'a quiet year'}`;
     this.add.text(EDGE + PAD, dockY + PAD + BTN_H / 2, heading, text.h1).setOrigin(0, 0.5);
 
     const colY = dockY + PAD + BTN_H + PAD;
@@ -74,7 +74,7 @@ export class YearReview extends Phaser.Scene {
     });
     announce(sections.map((sec) => `${sec.title}. ${sec.body}`).join(' '));
 
-    const label = s.outcome ? 'See the final report' : `Start year ${rec.year + 1}`;
+    const label = s.outcome ? 'See the final report' : `Go to ${calendarYear(d, rec.year + 1)}`;
     const nav = new FocusNav(this);
     nav.add(
       new Button(this, WIDTH - EDGE - PAD - BTN_W, dockY + PAD, BTN_W, BTN_H, {

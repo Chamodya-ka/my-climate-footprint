@@ -7,6 +7,7 @@
  *   dev.state()                 // current GameState
  */
 import type * as Phaser from 'phaser';
+import { quizForYear } from './sim/state';
 import * as session from './session';
 import type { Button } from './ui/buttons';
 
@@ -70,6 +71,8 @@ export function installDevtools(game: Phaser.Game): void {
       await waitFor('Title');
       await click((l) => l === 'Start');
       await waitFor('RegionSelect');
+      press('Escape'); // skip the HUD tour, if it's showing
+      await sleep(300);
       await click((l) => l === session.data().regions[regionIndex]!.name);
       await waitFor('HouseSelect');
       const region = session.data().regions[regionIndex]!;
@@ -81,11 +84,20 @@ export function installDevtools(game: Phaser.Game): void {
       return waitFor('House');
     },
     /** Ends the year with the given quiz answer. Stops on the Roll scene if `stopAtRoll`. */
+    /** Answers the year's question (shown at the start of each year in the House view). */
+    async answer(answerIndex = 0) {
+      await waitFor('House');
+      if (session.state().phase !== 'quiz') return;
+      const label = quizForYear(session.data(), session.state().year).answers[answerIndex]!.label;
+      await sleep(450); // let the question bubble grow in
+      await click((l) => l === label);
+      await click((l) => l === 'Continue'); // close the feedback
+      await sleep(450); // shrink back, then the House view restarts
+    },
+    /** Answers the question if it's still open, finishes upgrades, and waits for the review. Stops on the Roll scene if `stopAtRoll`. */
     async endYear(answerIndex = 0, stopAtRoll = false) {
-      await click((l) => l === 'Finish Upgrades');
-      await waitFor('Quiz');
-      for (let i = 0; i < answerIndex; i++) press('ArrowDown');
-      press('Enter');
+      await dev.answer(answerIndex);
+      await click((l) => l === 'Finish Upgrades' || l === 'Skip Upgrades');
       await waitFor('Roll');
       if (stopAtRoll) return 'Roll';
       await click((l) => l === 'See the year review');

@@ -27,6 +27,22 @@ export function setState(next: GameState): void {
   gameState = next;
 }
 
+/** Whether this game's short tour of the HUD boxes still needs showing (once per new game). */
+let hudTourPending = false;
+
+/** Starts a new game: sets the state and queues the HUD tour. */
+export function startNewGame(next: GameState): void {
+  gameState = next;
+  hudTourPending = true;
+}
+
+/** True the first time it's called after startNewGame(); false after that. */
+export function takeHudTour(): boolean {
+  const pending = hudTourPending;
+  hudTourPending = false;
+  return pending;
+}
+
 /** Applies a sim Result. Returns true on success; otherwise announces the reason. */
 export function apply(result: Result): boolean {
   if (!result.ok) {

@@ -1,9 +1,10 @@
 import * as Phaser from 'phaser';
 import { formatMoney } from '../sim/format';
 import { getHouse } from '../sim/state';
-import { data, state } from '../session';
+import { data, state, takeHudTour } from '../session';
 import { FocusNav } from '../ui/buttons';
-import { areaHazardLine, regionHazardLabel } from '../ui/copy';
+import { areaHazardLine, hudIntro, regionHazardLabel } from '../ui/copy';
+import { showCoachMarks } from '../ui/coachMarks';
 import { RegionLabel, rgbToNumber } from '../ui/mapMarkers';
 import { MapView } from '../ui/mapView';
 import { panel } from '../ui/panels';
@@ -56,6 +57,7 @@ export class RegionSelect extends Phaser.Scene {
     const bg = panel(this, px, top, PANEL_W, 10).setDepth(-1).setAlpha(0.95);
     const fitPanel = () => bg.setSize(PANEL_W, info.y + info.height + PAD - top);
     fitPanel();
+    const infoPanel = [bg, title, sub, info];
 
     const select = (regionId: string) => this.scene.start('HouseSelect', { regionId });
     const nav = new FocusNav(this);
@@ -85,13 +87,27 @@ export class RegionSelect extends Phaser.Scene {
       nav.add(label);
     }
 
+    // At the start of a new game, explain the HUD boxes before asking where to live.
+    let touring = false;
+    if (takeHudTour()) {
+      touring = true;
+      infoPanel.forEach((o) => o.setAlpha(0));
+      const steps = hudIntro(d).map((step) => ({ ...step, target: hud.rows[step.key] }));
+      showCoachMarks(this, steps, nav, () => {
+        touring = false;
+        this.tweens.add({ targets: infoPanel, alpha: (o: Phaser.GameObjects.GameObject) => (o === bg ? 0.95 : 1), duration: 250 });
+      });
+    }
+
     // Anywhere inside a region works too, not just its label.
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
+      if (touring) return;
       const key = map.regionAt(p.x, p.y);
       const label = key ? labelFor.get(key) : undefined;
       if (label) nav.focus(label);
     });
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      if (touring) return;
       if (over.length > 0) return; // a label handles its own clicks
       const key = map.regionAt(p.x, p.y);
       const region = d.regions.find((r) => r.mapRegion === key);

@@ -12,3 +12,11 @@ export function formatTonnes(tonnes: number): string {
 export function formatSigned(n: number): string {
   return n > 0 ? `+${n}` : `${n}`;
 }
+
+/** Short prices for map tags, e.g. $595k or $1.35m. */
+export function formatPriceShort(dollars: number): string {
+  const MILLION = 1_000_000;
+  const THOUSAND = 1_000;
+  if (dollars >= MILLION) return `$${Number((dollars / MILLION).toFixed(2))}m`;
+  return `$${Math.round(dollars / THOUSAND)}k`;
+}

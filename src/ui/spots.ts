@@ -5,12 +5,9 @@ import type { Focusable, FocusNav } from './buttons';
 import { colours, FONT } from './theme';
 
 export const SPOT_COPY: Record<Spot, { name: string; intro: string }> = {
-  doors: { name: 'Doors', intro: 'Keep floodwater out at the doorways.' },
-  foundations: { name: 'Foundations', intro: 'Raise or strengthen what the house stands on.' },
-  drains: { name: 'Drains', intro: 'Carry rain and surface water away from the house.' },
-  inside: { name: 'Inside', intro: 'Get ready to stay home safely through a disaster.' },
-  garden: { name: 'Garden', intro: 'Roots that bind the soil and take in carbon.' },
-  slope: { name: 'Slope', intro: 'Hold back the bank behind the house.' },
+  door: { name: 'Door', intro: 'Keep floodwater out at the doorway, and be ready to stay home safely.' },
+  foundation: { name: 'Foundation', intro: 'Raise or strengthen what the house stands on.' },
+  garden: { name: 'Garden', intro: 'Work the ground around the house: drains, walls, nails and trees.' },
 };
 
 const RADIUS = 22;

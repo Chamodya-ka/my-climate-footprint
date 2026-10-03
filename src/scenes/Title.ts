@@ -1,8 +1,8 @@
 import * as Phaser from 'phaser';
 import { newGame } from '../sim/turn';
-import { data, randomSeed, setState } from '../session';
+import { data, randomSeed, startNewGame } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
-import { PLACEHOLDER_NOTE } from '../ui/copy';
+import { lastCalendarYear, PLACEHOLDER_NOTE } from '../ui/copy';
 import { textBlock } from '../ui/panels';
 import { HEIGHT, text, WIDTH } from '../ui/theme';
 
@@ -22,7 +22,7 @@ export class Title extends Phaser.Scene {
       760,
       `Buy a house in a valley-and-harbour city inspired by Lower Hutt. Each year you get ` +
         `${d.balance.actionsPerTurn} actions to prepare or repair, then the weather is rolled. ` +
-        `Keep your house standing for ${d.balance.gameLengthYears} years.\n\n` +
+        `Keep your house standing from ${d.balance.startYear} to ${lastCalendarYear(d)}.\n\n` +
         `Your neighbourhood's everyday choices change its carbon footprint, and a bigger footprint ` +
         `makes floods and landslides more likely.`,
     ).setAlign('center');
@@ -32,7 +32,7 @@ export class Title extends Phaser.Scene {
         label: 'Start',
         fontSize: 26,
         onActivate: () => {
-          setState(newGame(d, randomSeed()));
+          startNewGame(newGame(d, randomSeed()));
           this.scene.start('RegionSelect');
         },
       }),

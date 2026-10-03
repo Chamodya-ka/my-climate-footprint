@@ -7,6 +7,7 @@
   "minDamagePercent": 10,
   "repairCostRate": 1.0,
   "gameLengthYears": 10,
+  "startYear": 2026,
   "startingFootprint": 6,
   "baseYearlyIncrement": 0.5,
   "source": "placeholder"

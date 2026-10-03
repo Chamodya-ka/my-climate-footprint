@@ -73,6 +73,24 @@ export class MapView {
     });
   }
 
+  /**
+   * Zooms so a rectangle of the map (map pixels) covers the whole screen, then calls `done`.
+   * If the rectangle is taller than the screen, `align` picks which part stays in view.
+   */
+  zoomToRect(rect: Viewport, done: () => void, align: 'top' | 'centre' = 'centre'): void {
+    const s = Math.max(WIDTH / rect.w, HEIGHT / rect.h);
+    const spareY = HEIGHT - rect.h * s;
+    this.scene.tweens.add({
+      targets: this.layer,
+      scale: s,
+      x: (WIDTH - rect.w * s) / 2 - rect.x * s,
+      y: (align === 'top' ? 0 : spareY / 2) - rect.y * s,
+      duration: ZOOM_MS,
+      ease: 'Sine.easeInOut',
+      onComplete: done,
+    });
+  }
+
   highlight(mapRegion: string | null): void {
     for (const [key, img] of this.highlights) img.setVisible(key === mapRegion);
   }

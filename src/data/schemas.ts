@@ -22,6 +22,8 @@ export const balanceSchema = z.strictObject({
   minDamagePercent: percent,
   repairCostRate: z.number().nonnegative(),
   gameLengthYears: z.number().int().positive(),
+  /** Calendar year of game year 1, for display (e.g. 2026; with 10 years the game ends in 2035). */
+  startYear: z.number().int().positive(),
   startingFootprint: z.number().nonnegative(),
   baseYearlyIncrement: z.number(),
   source,
@@ -74,11 +76,18 @@ export const housesSchema = z.strictObject({
       z.strictObject({
         id,
         areaId: id,
-        /** Pin position on the map, in map-image pixels (assets/map, 1600×1000). */
-        map: z.strictObject({ x: z.number().nonnegative(), y: z.number().nonnegative() }),
+        /** Asset id in assets/map/house_and_region_assets (sprites/<sprite>.png, its _zones mask, and zoom_data pins). */
+        sprite: z.string().regex(/^[a-z0-9_]+$/),
         name: z.string().min(1),
-        style: z.enum(['bungalow', 'beachfront', 'villa', 'townhouse', 'hillside']),
+        tier: z.enum(['standard', 'luxury']),
         price: money.positive(),
+        bedrooms: z.number().int().positive(),
+        /** Square metres. */
+        floorArea: z.number().positive(),
+        built: z.string().min(1),
+        /** Floor height above the ground, in metres. Shown to players; not used by the rules. */
+        floorHeight: z.number().nonnegative(),
+        inspiredBy: z.string().min(1),
         blurb: z.string().min(1),
         source,
       }),
@@ -86,8 +95,8 @@ export const housesSchema = z.strictObject({
     .min(2, 'selling needs at least one other house to move to'),
 });
 
-/** Where on the house a mod's "+" marker sits. */
-export const SPOTS = ['doors', 'foundations', 'drains', 'inside', 'garden', 'slope'] as const;
+/** Where on the house a mod's "+" marker sits: a zone in the house sprite's _zones mask. */
+export const SPOTS = ['door', 'foundation', 'garden'] as const;
 export type Spot = (typeof SPOTS)[number];
 
 export const modsSchema = z.strictObject({
@@ -115,7 +124,15 @@ export const quizSchema = z.strictObject({
         id,
         prompt: z.string().min(1),
         answers: z
-          .array(z.strictObject({ id, label: z.string().min(1), footprintDelta: z.number() }))
+          .array(
+            z.strictObject({
+              id,
+              label: z.string().min(1),
+              footprintDelta: z.number(),
+              /** Shown after answering: why this choice raises or lowers the footprint. */
+              explanation: z.string().min(1),
+            }),
+          )
           .min(2),
         source,
       }),

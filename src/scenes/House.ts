@@ -1,13 +1,15 @@
 import * as Phaser from 'phaser';
 import { SPOTS, type Mod, type Spot } from '../data/schemas';
 import { formatMoney } from '../sim/format';
-import { getHouse, type HouseState } from '../sim/state';
-import { applyMod, checkApplyMod, checkEndTurn, checkRepair, checkSell, endTurn, repair, sell } from '../sim/turn';
+import { getHouse, quizForYear, type HouseState } from '../sim/state';
+import { answerQuiz, applyMod, checkApplyMod, checkEndTurn, checkRepair, checkSell, endTurn, repair, sell } from '../sim/turn';
 import { apply, data, state } from '../session';
 import { Button, FocusNav, type ButtonOptions } from '../ui/buttons';
-import { DISASTER_NAME, modTooltip } from '../ui/copy';
+import { calendarYear, modTooltip } from '../ui/copy';
+import { confirmDialog } from '../ui/confirm';
 import { drawHUD } from '../ui/HUD';
 import { drawHouseScene, FULL_SCREEN_ART, spotPositions } from '../ui/houseArt';
+import { showQuestion } from '../ui/questionDialog';
 import { SPOT_COPY, SpotButton } from '../ui/spots';
 import { colours, HEIGHT, text, WIDTH } from '../ui/theme';
 
@@ -57,12 +59,12 @@ export class HouseScene extends Phaser.Scene {
     const houseDef = getHouse(d, house.houseId);
 
     drawHouseScene(this, d, houseDef, house, FULL_SCREEN_ART).setDepth(-10);
-    drawHUD(this, d, s);
+    const hud = drawHUD(this, d, s);
 
     this.nav = new FocusNav(this);
 
     // "+" markers, left to right so focus order follows the picture.
-    const positions = spotPositions(FULL_SCREEN_ART, houseDef, house);
+    const positions = spotPositions(FULL_SCREEN_ART, houseDef);
     const spots = [...SPOTS].sort((a, b) => positions[a].x - positions[b].x);
     for (const spot of spots) {
       const mods = d.mods.filter((m) => m.spot === spot);
@@ -78,7 +80,7 @@ export class HouseScene extends Phaser.Scene {
 
     // Buttons tiled along the bottom. Repair only appears when there's damage to fix.
     const buttons: Omit<ButtonOptions, 'fontSize'>[] = [];
-    if (house.value < house.originalValue) {
+    if (house.value < house.fullValue) {
       const repairCheck = checkRepair(s, d);
       buttons.push({
         label: 'Repair the house',
@@ -92,16 +94,28 @@ export class HouseScene extends Phaser.Scene {
     buttons.push({
       label: 'Sell and Move',
       disabledReason: sellCheck.ok ? null : sellCheck.reason,
-      onActivate: () => {
-        if (apply(sell(state(), d))) this.scene.start('RegionSelect');
-      },
+      onActivate: () =>
+        confirmDialog(this, {
+          nav: this.nav,
+          title: `Sell the ${houseDef.name.toLowerCase()}?`,
+          message:
+            `You'll get its current value, ${formatMoney(house.value)}` +
+            (house.value < house.fullValue ? ` (it's worth ${formatMoney(house.fullValue)} repaired; the damage isn't fixed)` : '') +
+            `.\n\nMoving uses the rest of this year, and your upgrades stay with this house. You can't buy it back.`,
+          confirmLabel: 'Sell and move',
+          onConfirm: () => {
+            if (apply(sell(state(), d))) this.scene.start('RegionSelect');
+          },
+        }),
     });
     const endCheck = checkEndTurn(s);
     buttons.push({
-      label: 'Finish Upgrades',
+      // "Skip" until an upgrade has been bought this year.
+      label: s.thisYear.modsBuilt.length > 0 ? 'Finish Upgrades' : 'Skip Upgrades',
       disabledReason: endCheck.ok ? null : endCheck.reason,
       onActivate: () => {
-        if (apply(endTurn(state()))) this.scene.start('Quiz');
+        const before = state();
+        if (apply(endTurn(before, d))) this.scene.start('Roll', { before });
       },
     });
     const rowW = buttons.length * BTN_W + (buttons.length - 1) * GAP;
@@ -110,6 +124,20 @@ export class HouseScene extends Phaser.Scene {
       this.nav.add(new Button(this, x, HEIGHT - EDGE - BTN_H, BTN_W, BTN_H, { ...opts, fontSize: 20 }));
     });
     this.nav.focusIndex(this.params.focusIndex ?? 0);
+
+    // Each year opens with the question, before any upgrades.
+    if (s.phase === 'quiz') {
+      showQuestion(this, {
+        year: calendarYear(d, s.year),
+        question: quizForYear(d, s.year),
+        from: hud.footprintBox,
+        nav: this.nav,
+        onAnswer: (answerId) => apply(answerQuiz(state(), d, answerId)),
+        // Restart once the feedback is closed, so the upgrades unlock.
+        onDone: () => this.scene.restart({}),
+      });
+      return;
+    }
 
     const reopen = this.params.openSpot;
     if (reopen) {
@@ -153,7 +181,7 @@ export class HouseScene extends Phaser.Scene {
     const infoH = Math.max(
       ...mods.map((m) => {
         const check = checkApplyMod(s, d, m.id);
-        info.setText(modTooltip(d, house, m) + (check.ok ? '' : `\nUnavailable: ${check.reason}`));
+        info.setText(modTooltip(m) + (check.ok ? '' : `\nUnavailable: ${check.reason}`));
         return info.height;
       }),
     );
@@ -175,16 +203,14 @@ export class HouseScene extends Phaser.Scene {
     mods.forEach((mod, i) => {
       const built = house.permanentMods.includes(mod.id) || house.consumables.includes(mod.id);
       const check = checkApplyMod(s, d, mod.id);
-      const effects = (Object.entries(mod.reductions) as [keyof typeof DISASTER_NAME, number][])
-        .map(([dis, n]) => `${DISASTER_NAME[dis]} −${n}`)
-        .join(', ');
-      const status = built ? (mod.type === 'consumable' ? '✓ Stocked' : '✓ Built') : formatMoney(mod.cost);
+      // Price when it can be bought; otherwise why not, so the reason is visible without focusing it.
+      const status = built ? (mod.type === 'consumable' ? '✓ Stocked' : '✓ Built') : check.ok ? formatMoney(mod.cost) : `✕ ${check.reason}`;
       const b = new Button(this, left, by, inner, MOD_BTN_H, {
         label: mod.name,
-        detail: `${status} · ${effects}`,
+        detail: status,
         fontSize: 18,
         disabledReason: check.ok ? null : check.reason,
-        onFocus: () => info.setText(modTooltip(d, house, mod) + (check.ok ? '' : `\nUnavailable: ${check.reason}`)),
+        onFocus: () => info.setText(modTooltip(mod) + (check.ok ? '' : `\nUnavailable: ${check.reason}`)),
         onActivate: () => {
           if (apply(applyMod(state(), d, mod.id))) {
             this.scene.restart({ focusIndex: markerIndex, openSpot: spot, windowFocus: i } satisfies HouseParams);

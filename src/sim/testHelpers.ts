@@ -1,7 +1,7 @@
 import { loadGameData } from '../data';
 import type { GameData } from '../data/schemas';
-import type { GameState } from './state';
-import { buyHouse, expectOk, newGame } from './turn';
+import { quizForYear, type GameState } from './state';
+import { answerQuiz, buyHouse, continueAfterReview, expectOk, newGame } from './turn';
 
 export const data: GameData = loadGameData();
 
@@ -12,12 +12,26 @@ export function dataWith(patch: (d: GameData) => void): GameData {
   return copy;
 }
 
-export const FLOOD_HOUSE = 'valley-house';
-export const LANDSLIDE_HOUSE = 'slope-house';
+export const FLOOD_HOUSE = 'riverside-bungalow';
+export const LANDSLIDE_HOUSE = 'hillysides-house';
+/** Purchase price of FLOOD_HOUSE, so tests don't depend on placeholder prices. */
+export const FLOOD_PRICE = data.houses.find((h) => h.id === FLOOD_HOUSE)!.price;
 
-/** A game in year 1's action phase, in the given house. */
-export function startedGame(houseId = FLOOD_HOUSE, d: GameData = data, seed = 1): GameState {
-  return expectOk(buyHouse(newGame(d, seed), d, houseId));
+/** Answers the current year's question with the answer at `answerIndex`. */
+export function answer(s: GameState, d: GameData = data, answerIndex = 0): GameState {
+  const choice = quizForYear(d, s.year).answers[answerIndex]!;
+  return expectOk(answerQuiz(s, d, choice.id));
+}
+
+/** A game in year 1's action phase (question answered), in the given house. */
+export function startedGame(houseId = FLOOD_HOUSE, d: GameData = data, seed = 1, answerIndex = 0): GameState {
+  return answer(expectOk(buyHouse(newGame(d, seed), d, houseId)), d, answerIndex);
+}
+
+/** Leaves the year review and, unless the game is over, answers the next year's question. */
+export function nextYear(s: GameState, d: GameData = data, answerIndex = 0): GameState {
+  const next = expectOk(continueAfterReview(s, d));
+  return next.phase === 'quiz' ? answer(next, d, answerIndex) : next;
 }
 
 /** Overrides the house value/mods directly to set up a scenario. */

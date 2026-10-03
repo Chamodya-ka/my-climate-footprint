@@ -1,16 +1,19 @@
 import * as Phaser from 'phaser';
-import { formatTonnes } from '../sim/format';
+import { formatMoney } from '../sim/format';
 import { getHouse, type GameState, type YearRecord } from '../sim/state';
 import { data, state } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
 import { DISASTER_NAME } from '../ui/copy';
+import { dieKey } from '../ui/dice';
 import { drawHUD } from '../ui/HUD';
 import { drawHouseScene, FULL_SCREEN_ART, groundY, slopeTop, type ArtBox } from '../ui/houseArt';
 import { panel } from '../ui/panels';
-import { colours, FONT, HEIGHT, text, WIDTH } from '../ui/theme';
+import { colours, HEIGHT, text, WIDTH } from '../ui/theme';
 
 const DICE_SPIN_MS = 1400;
+/** How often the tumbling die shows a new face. */
+const DIE_FACE_MS = 90;
 const EFFECT_MS = 2200;
 const EDGE = 16;
 const PANEL_H = 170;
@@ -47,44 +50,48 @@ export class Roll extends Phaser.Scene {
     const py = HEIGHT - PANEL_H - EDGE;
     const ui = this.add.container(0, 0).setDepth(5);
     ui.add(panel(this, EDGE, py, WIDTH - EDGE * 2, PANEL_H).setFillStyle(colours.panel, 1));
-    ui.add(this.add.text(EDGE + 16, py + 14, `Year ${rec.year} weather`, text.h2));
-    ui.add(
-      this.add.text(
-        EDGE + 16,
-        py + 54,
-        `Neighbourhood footprint: ${formatTonnes(rec.footprintAfter)}\n` +
-          rec.results.map((r) => `${DISASTER_NAME[r.disaster]} chance: ${r.chancePercent}%`).join('\n'),
-        { ...text.body, wordWrap: { width: INFO_W } },
-      ),
-    );
+    const heading = this.add.text(EDGE + 16, py + 14, 'One year goes by…', text.h2);
+    ui.add(heading);
+    // Income arrives at the start of next year, so there's none after the last year or a lost house.
+    if (!s.outcome) {
+      const income = d.balance.yearlyIncome;
+      ui.add(
+        this.add.text(
+          EDGE + 16,
+          heading.y + heading.height + 8,
+          `You earn ${formatMoney(income)}, and your bank balance goes up to ${formatMoney(s.bank + income)}.`,
+          { ...text.body, fontSize: '18px', wordWrap: { width: INFO_W } },
+        ),
+      );
+    }
 
     const anyHit = rec.results.some((r) => r.hit);
     this.rain(box, anyHit ? 400 : 60);
 
+    // One tumbling die per disaster roll. Purely cosmetic: no numbers or odds are shown.
+    // The sim has already decided the outcome; the die just lands on a random face.
     let x = EDGE + 16 + INFO_W + 24;
     let delay = 0;
     for (const r of rec.results) {
-      const label = this.add.text(x, py + 14, `Rolling for ${DISASTER_NAME[r.disaster].toLowerCase()}…`, {
-        ...text.body,
-        wordWrap: { width: DIE_W },
-      });
-      const die = this.add
-        .text(x + DIE_W / 2, py + 110, '00', { fontFamily: FONT, fontSize: '56px', color: colours.text, fontStyle: 'bold' })
+      const die = this.add.image(x + DIE_W / 2, py + PANEL_H / 2 - 6, dieKey(1));
+      const outcome = this.add
+        .text(x + DIE_W / 2, py + PANEL_H - 22, '', { ...text.body, fontStyle: 'bold' })
         .setOrigin(0.5);
-      ui.add([label, die]);
-      const spinner = this.time.addEvent({
-        delay: 60,
+      ui.add([die, outcome]);
+      const tumble = this.time.addEvent({
+        delay: DIE_FACE_MS,
         loop: true,
-        startAt: 0,
-        callback: () => die.setText(String(Phaser.Math.Between(0, 99)).padStart(2, '0')),
+        callback: () => die.setTexture(dieKey(Phaser.Math.Between(1, 6))).setAngle(Phaser.Math.Between(-30, 30)),
       });
+      this.tweens.add({ targets: die, y: die.y - 14, duration: DICE_SPIN_MS / 6, yoyo: true, repeat: 2, ease: 'Sine.easeOut' });
       this.time.delayedCall(delay + DICE_SPIN_MS, () => {
-        spinner.remove();
-        die.setText(String(r.roll).padStart(2, '0'));
-        const verdict = r.hit
-          ? `Rolled ${r.roll}, under ${r.chancePercent}: a ${r.disaster} hits.`
-          : `Rolled ${r.roll}, not under ${r.chancePercent}: no ${r.disaster}.`;
-        label.setText(verdict).setColor(r.hit ? colours.bad : colours.good);
+        tumble.remove();
+        die.setTexture(dieKey(Phaser.Math.Between(1, 6)));
+        this.tweens.add({ targets: die, angle: 0, duration: 150 });
+        const name = DISASTER_NAME[r.disaster].toLowerCase();
+        // Words and ✓/! marks, not just colour.
+        const verdict = r.hit ? `! A ${name} hits.` : `✓ No ${name} this year.`;
+        outcome.setText(verdict).setColor(r.hit ? colours.bad : colours.good);
         announce(verdict);
         if (r.hit) this.disasterEffect(r.disaster, box);
       });

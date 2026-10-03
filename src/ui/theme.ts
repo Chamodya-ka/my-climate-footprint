@@ -10,6 +10,8 @@ export const colours = {
   button: 0x24506b,
   buttonDisabled: 0x2a3138,
   focus: 0xffd166,
+  /** Text in the focus colour, e.g. the player's own choice. */
+  focusText: '#ffd166',
   text: '#f2f2f2',
   textDim: '#a9b7c2',
   textDisabled: '#7d8790',

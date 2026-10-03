@@ -3,7 +3,7 @@
     {
       "id": "seal-doors",
       "name": "Seal doors",
-      "spot": "doors",
+      "spot": "door",
       "type": "permanent",
       "cost": 8000,
       "reductions": { "flood": 20 },
@@ -14,7 +14,7 @@
     {
       "id": "elevate",
       "name": "Elevate the house",
-      "spot": "foundations",
+      "spot": "foundation",
       "type": "permanent",
       "cost": 120000,
       "reductions": { "flood": 30 },
@@ -25,7 +25,7 @@
     {
       "id": "foundation",
       "name": "Foundation improvement",
-      "spot": "foundations",
+      "spot": "foundation",
       "type": "permanent",
       "cost": 40000,
       "reductions": { "flood": 15 },
@@ -36,7 +36,7 @@
     {
       "id": "drainage",
       "name": "Drainage",
-      "spot": "drains",
+      "spot": "garden",
       "type": "permanent",
       "cost": 15000,
       "reductions": { "flood": 15 },
@@ -47,29 +47,29 @@
     {
       "id": "sandbags",
       "name": "Sandbags at house",
-      "spot": "doors",
+      "spot": "door",
       "type": "consumable",
       "cost": 1000,
       "reductions": { "flood": 5 },
       "footprintDelta": 0,
-      "blurb": "A wall of sandbags at the doors. Used up when a flood hits.",
+      "blurb": "A wall of sandbags across the doorways.",
       "source": "placeholder"
     },
     {
       "id": "store-food",
       "name": "Store food",
-      "spot": "inside",
+      "spot": "door",
       "type": "consumable",
       "cost": 1000,
       "reductions": { "flood": 5, "landslide": 5 },
       "footprintDelta": 0,
-      "blurb": "An emergency pantry lets you stay home safely and skip buying emergency supplies, which cuts recovery costs. It doesn't protect the building. Used up when a disaster hits.",
+      "blurb": "An emergency pantry lets you stay home safely and skip buying emergency supplies, which cuts recovery costs. It doesn't protect the building.",
       "source": "placeholder"
     },
     {
       "id": "retaining-wall",
       "name": "Retaining wall",
-      "spot": "slope",
+      "spot": "garden",
       "type": "permanent",
       "cost": 60000,
       "reductions": { "landslide": 50 },
@@ -80,7 +80,7 @@
     {
       "id": "soil-nailing",
       "name": "Soil nailing",
-      "spot": "slope",
+      "spot": "garden",
       "type": "permanent",
       "cost": 45000,
       "reductions": { "landslide": 20 },
@@ -102,7 +102,7 @@
     {
       "id": "drainage-loose-soil",
       "name": "Drainage over loose soil",
-      "spot": "slope",
+      "spot": "garden",
       "type": "permanent",
       "cost": 12000,
       "reductions": { "landslide": 5 },

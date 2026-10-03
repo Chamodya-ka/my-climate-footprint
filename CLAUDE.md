@@ -50,12 +50,12 @@ src/
   devtools.ts dev-only console/test helpers (window.dev), never in production builds
   sim/        state.ts, turn.ts, weather.ts, damage.ts, footprint.ts, economy.ts, rng.ts,
               advice.ts (what helped / would have helped), format.ts, *.test.ts
-  scenes/     Boot, Title, RegionSelect, HouseSelect, House, Quiz, Roll, YearReview, FinalReport
-  ui/         HUD, buttons (Button + FocusNav), panels, houseArt, copy, theme, a11y, icons, spots,
+  scenes/     Boot, Title, RegionSelect, HouseSelect, House (incl. the year's question), Roll, YearReview, FinalReport
+  ui/         HUD, buttons (Button + FocusNav), panels, houseArt, houseAssets, copy, theme, a11y, icons, spots,
               regionMap + mapView + mapMarkers (the valley map)
   data/       areas.json, houses.json, weather.json, mods.json, quiz.json, balance.json, schemas.ts, index.ts
-assets/       map (valley map art + cartoon2.py), sprites, audio, LICENSES.md
-tools/blender/house_sprites.py   (placeholder; houses are drawn in code for now)
+assets/       map (valley map art, house_and_region_assets: house sprites + zone masks + zoomed region views), sprites, audio, LICENSES.md
+tools/blender/house_sprites.py   (obsolete placeholder; house sprites now come from assets/map/house_and_region_assets)
 ```
 
 ## Game flow
@@ -63,11 +63,11 @@ tools/blender/house_sprites.py   (placeholder; houses are drawn in code for now)
 1. Title screen → **Region select** → **House select** → buy if within budget.
 2. **Yearly turn loop:**
    1. **Year start:** `balance.yearlyIncome` is added to the bank, and action points reset to `balance.actionsPerTurn`.
-   2. **Action phase:** apply modifications or repair the house (1 action each), or sell and move (returns to Region select).
-   3. **End turn:** "What would you do?" quiz. The answer sets this year's footprint change.
-   4. **Update neighbourhood footprint:** add this year's change.
+   2. **The year's question:** "What would you do?" (phase `quiz`). Upgrades, repairs and selling are locked until it's answered. The answer is recorded in `thisYear.quiz`; it doesn't change the footprint yet.
+   3. **Action phase:** apply modifications or repair the house (1 action each), or sell and move (returns to Region select; moving doesn't ask the question again).
+   4. **End turn ("Skip Upgrades", or "Finish Upgrades" once an upgrade has been bought that year), then update the neighbourhood footprint:** add this year's change, using the recorded answer.
    5. **Weather roll:** look up disaster odds from the updated footprint, then roll.
-   6. **Resolution:** apply damage as a loss of house value, use up consumables. House value never appreciates.
+   6. **Resolution:** apply damage as a loss of house value, use up consumables. House value only rises through permanent upgrades (see Money and value).
    7. **Year review:** explain what happened, why, and what helped.
    8. **End check:** if the house was destroyed, it's **game over** (loss). If the last year has been survived, it's a **win**. Otherwise continue to the next year.
 3. **Final report:** win or loss, plus the stats listed under Winning and losing.
@@ -76,13 +76,15 @@ tools/blender/house_sprites.py   (placeholder; houses are drawn in code for now)
 
 Use fictional "inspired by" area names. **Never use real street addresses.**
 
-| Region  | Area (inspired by)         | House               | Disaster  | Flood cause (copy only)     |
-|---------|----------------------------|---------------------|-----------|-----------------------------|
-| Coastal | Coastal flats (Petone)     | Near the beach      | Flood     | Storm surge, swell, surface |
-| Coastal | Bays (Eastbourne)          | Beachfront          | Flood     | Storm surge, swell          |
-| Urban   | Valley floor (Hutt Valley) | Valley house        | Flood     | River, surface              |
-| Urban   | City centre (Hutt CBD)     | Townhouse/apartment | Flood     | Surface                     |
-| Hills   | Hillside (Wainuiomata)     | Near a slope        | Landslide | n/a                         |
+| Region  | Area (inspired by)         | Houses (standard / luxury)                                   | Disaster  | Flood cause (copy only)     |
+|---------|----------------------------|--------------------------------------------------------------|-----------|-----------------------------|
+| Coastal | Coastal flats (Petone)     | Seaside villa                                                | Flood     | Storm surge, swell, surface |
+| Coastal | Bays (Eastbourne)          | Restored double-bay villa (luxury)                           | Flood     | Storm surge, swell          |
+| Urban   | Valley floor (Hutt Valley) | 1950s weatherboard bungalow / Renovated bungalow with garage | Flood     | River, surface              |
+| Urban   | City centre (Hutt CBD)     | New-build townhouse / Architect-designed townhouse           | Flood     | Surface                     |
+| Hills   | Hillside (Wainuiomata)     | Hillside weatherboard home / Glass-and-concrete hillside house | Landslide | n/a                       |
+
+Eight houses: 4 urban (map region "riverside"), 2 coastal and 2 hills (map region "hillysides"). Each has a standard and a luxury tier; `houses.json` also records bedrooms, floor area, year built and floor height (shown to players only, no rule uses it). The luxury coastal villa's `inspiredBy` says Petone, but it sits in the eastern bay on the map, so it's in the Bays area.
 
 The game has one flood mechanic. The "flood cause" column exists only for year-review text. It teaches that different places flood for different reasons without adding rules.
 
@@ -110,7 +112,7 @@ There are **no severity tiers** in the MVP. Each disaster has one fixed damage v
 
 ## Damage
 
-Base damage is a percentage of the house's **original value** (its purchase price):
+Base damage is a percentage of the house's **full value** (its purchase price plus the cost of every permanent upgrade built on it):
 
 | Disaster  | Base damage |
 |-----------|-------------|
@@ -119,14 +121,14 @@ Base damage is a percentage of the house's **original value** (its purchase pric
 
 ```
 effective% = max(balance.minDamagePercent, base% - sum of reductions from active mods for that disaster)
-valueLost  = originalValue × effective% / 100
+valueLost  = fullValue × effective% / 100
 houseValue = max(0, houseValue - valueLost)
 ```
 
 - `balance.minDamagePercent` is 10.
 - **Every disaster that hits does at least 10% damage**, however well prepared the house is.
-- **Unrepaired damage stacks.** Each new hit takes another share of the original value.
-- **When house value reaches 0 or below, the house is destroyed.** In other words, if `originalValue - damage × n ≤ 0` over n unrepaired hits, the house is gone.
+- **Unrepaired damage stacks.** Each new hit takes another share of the full value.
+- **When house value reaches 0 or below, the house is destroyed.** In other words, if `fullValue - damage × n ≤ 0` over n unrepaired hits, the house is gone.
   - Example: an unprepared flood house (40% per hit) is destroyed by its third unrepaired flood.
   - Example: a fully prepared one (10% per hit) survives nine and is destroyed by the tenth.
   - Preparation buys time; only repairing resets the clock.
@@ -138,8 +140,8 @@ houseValue = max(0, houseValue - valueLost)
 
 ## Repairs
 
-- **Repairing is an action.** It costs exactly 1 action and restores the house to its original value in one go, however many unrepaired hits it has taken.
-- **Money:** a repair costs `balance.repairCostRate × (originalValue - houseValue)`.
+- **Repairing is an action.** It costs exactly 1 action and restores the house to its full value in one go, however many unrepaired hits it has taken.
+- **Money:** a repair costs `balance.repairCostRate × (fullValue - houseValue)`.
   - `repairCostRate` is 1.0, so a repair costs exactly the value it restores: the house value goes back up and the bank goes down by the same amount.
   - Keep the rate configurable.
 - Repair is only available when the house is damaged and the bank can cover the full cost. There are no partial repairs.
@@ -176,8 +178,9 @@ Rules for mods:
 - "Drainage" and "Drainage over loose soil" are separate mods with separate IDs.
 - **Diminishing returns.** Once a house reaches the 10% floor for its disaster, further mods for that disaster add nothing.
   - Example: seal doors plus elevating already gives 40 − 50 → 10% for floods.
-  - The House view must show the current "damage if hit" % so players see the floor coming. TODO: since the House view was simplified it isn't shown there (or in the HUD); it appears only in the year review, and upgrade tooltips say when the floor has been reached.
-  - Don't block extra mods. Instead, the mod's tooltip should say it won't reduce damage further.
+  - Don't show "damage if hit" percentages, reductions, or "won't help here / won't reduce damage further" notes when choosing upgrades (design decision: players discover the effects in the year review). The upgrade window shows each mod's description, whether it's permanent or consumable, and its price.
+  - Don't block extra mods.
+  - When a mod can't be bought, show why on its row in the upgrade window (e.g. "✕ No actions left this year."), not only on focus.
 - Mods stay with the house when it is sold. The player starts fresh in the new house.
 
 **Copy rule for store food.** Describe it as reducing recovery costs (staying home safely, not buying emergency supplies), not as protecting the building. Players should not leave thinking pantry food protects walls.
@@ -190,7 +193,8 @@ The game tracks one footprint value, framed in all copy as **the neighbourhood's
 - **Each year:** `footprint += balance.baseYearlyIncrement + quizAnswerDelta + sum of active mod footprint deltas`.
   - The footprint never goes below 0.
   - Planting trees has a footprint delta. Its value is a placeholder until provided.
-- **Quiz format:** a "What would you do?" scenario with one answer per year.
+- **Quiz format:** a "What would you do?" scenario with one answer per year, asked at the start of the year.
+- **Question dialog** (`src/ui/questionDialog.ts`): a speech bubble that grows out of the HUD's neighbourhood footprint box (which pulses while it's open), over the dimmed house. It can't be dismissed. Before answering it shows only the question and answers: no hint of how an answer changes the footprint. After answering, the same bubble shows feedback (`quizFeedback()` in `src/ui/copy.ts`): ✓/✗ whether the choice was correct (correct = the lowest `footprintDelta` among the options; ties count), what it does to the neighbourhood footprint ("If your neighbourhood made this choice…", marked as a game value, applied when the year ends), and every option with its change and its `explanation` from `quiz.json`, the player's choice marked "▶ … (your choice)". Continue closes it and unlocks the upgrades.
 
 Example entry in `quiz.json`. The deltas are placeholders until provided:
 
@@ -216,6 +220,7 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
 ## Winning and losing
 
 - **Win:** survive all `balance.gameLengthYears` years (N, configurable, default 10) with the house standing.
+- **Calendar years:** players see calendar years, never "Year N". Game year 1 is `balance.startYear` (2026), so 10 years run 2026–2035. Use `calendarYear()` / `lastCalendarYear()` from `src/ui/copy.ts`; the sim keeps counting years from 1.
 - **Loss:** the house is destroyed. This is game over immediately, even mid-game.
 - There is no other score. Bank balance, footprint and net worth do not decide the outcome.
 - **Final report**, shown for both outcomes:
@@ -234,29 +239,31 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
   - The core money decision is how to split limited income between preparing (mods) and recovering (repairs).
 - The bank pays for houses, modifications and repairs.
 - **The bank never goes negative.** Disable any action the player can't afford, and say why.
-- **House value never appreciates.** Its maximum is the original value.
-  - Do not add appreciation, market trends or value bonuses from mods.
+- **House value rises only through permanent upgrades.** Each permanent upgrade adds its full dollar cost to both the house value and its full value (`HouseState.fullValue`); consumables add nothing, since they get used up. `purchasePrice` never changes.
+  - Value never exceeds the full value. Damage takes a share of the full value, repairs restore it, and selling returns the current (upgraded, possibly damaged) value.
+  - Upgrading a damaged house adds value but doesn't fix the damage: the repair cost stays the same.
+  - Do not add appreciation, market trends or other value changes.
 - **Selling:**
   - The player receives the current value.
   - Selling plus buying uses the whole turn (default, pending open question 3). After moving, actions are 0 and the player can't sell again that year.
   - The player can't buy back the house they just sold.
   - Only allow selling if the bank plus the sale value can afford at least one other house. Otherwise the player could end up homeless, a state the game has no rules for.
-- **HUD** (`src/ui/HUD.ts`, shown on the RegionSelect, HouseSelect, House, Quiz, Roll and YearReview screens):
+- **HUD** (`src/ui/HUD.ts`, shown on the RegionSelect, HouseSelect, House, Roll and YearReview screens):
   - Top left box: neighbourhood footprint.
-  - Top centre, no box: "Year N of M" in large white text with a dark outline. Hidden in year 0 (before the first house is bought).
-  - Top right box: bank, house value (current dollar value only), total repair cost (the cost to repair the house fully right now; $0 when undamaged). With no house (choosing or moving), just the bank. `drawHUD()` returns the box's bottom edge (`rightBottom`) so side panels can sit below it.
+  - Top centre, no box: the calendar year (e.g. "2026") in large white text with a dark outline. Hidden in year 0 (before the first house is bought).
+  - Top right box: bank, house value (current dollar value only), total repair cost (the cost to repair the house fully right now; $0 when undamaged). All three rows always show; house value and repair cost are $0 with no house (choosing or moving). `drawHUD()` returns the box's bottom edge (`rightBottom`) so side panels can sit below it.
   - Not in the HUD: odds (shown in the Roll panel and year review), actions left (in upgrade windows only), damage if hit and hits left (year review only).
 
 ## Screen layout
 
-- **House, Quiz, Roll, YearReview:** the player's house is drawn full screen as the background (`FULL_SCREEN_ART` / `drawBackdrop` in `src/ui/houseArt.ts`). Content sits along the bottom, so the house stays visible above it.
-  - House: round "+" markers on the house open upgrade windows, one per spot (doors, foundations, drains, inside, garden, slope). Each mod's `spot` in `mods.json` decides its marker; positions come from `spotPositions()` in `houseArt.ts`. Markers have no text label; the spot name and upgrades in place (e.g. "Doors upgrades, 1/2 in place") are announced to screen readers on focus. The window is modal: it lists that spot's mods with tooltips; Escape, Close or clicking outside closes it, and it reopens after a purchase. Keep the House view minimal: no text panel, just single-line buttons (no subtext) tiled horizontally and centred along the bottom: "Repair the house" (only while the house is damaged; shown with ✕ if unaffordable, and the reason is announced on focus or click), "Sell and Move" and "Finish Upgrades" (ends the action phase and opens the quiz). Repair cost is in the HUD.
-  - Quiz: question, answers in two columns, and an explanation of the focused answer's footprint change.
-  - Roll: the year's odds, one die per disaster, then the continue button. The HUD and house show the pre-roll state until the dice land, so the result isn't spoiled.
+- **House, Roll, YearReview:** the player's house is drawn full screen as the background (`FULL_SCREEN_ART` / `drawBackdrop` in `src/ui/houseArt.ts`). Content sits along the bottom, so the house stays visible above it.
+  - House: round "+" markers on the house open upgrade windows, one per zone of the house sprite: door (seal doors, sandbags, store food), foundation (foundation improvement, elevate) and garden (drainage, retaining wall, soil nailing, planting trees, drainage over loose soil). The roof zone has no marker (solar panels are out; open question 4). Each mod's `spot` in `mods.json` decides its marker; positions come from the sprite's measured zones via `spotPositions()` in `houseArt.ts`. Markers have no text label; the spot name and upgrades in place (e.g. "Door upgrades, 1/3 in place") are announced to screen readers on focus. The window is modal: it lists that spot's mods with tooltips; Escape, Close or clicking outside closes it, and it reopens after a purchase. Keep the House view minimal: no text panel, just single-line buttons (no subtext) tiled horizontally and centred along the bottom: "Repair the house" (only while the house is damaged; shown with ✕ if unaffordable, and the reason is announced on focus or click), "Sell and Move" (asks for confirmation first, via `confirmDialog()` in `src/ui/confirm.ts`) and "Skip Upgrades" / "Finish Upgrades" (the label changes once an upgrade is bought that year; either ends the action phase and rolls the weather). Repair cost is in the HUD.
+  - Roll: "One year goes by…" with "You earn $X, and your bank balance goes up to $Y." below it (income actually arrives at the start of next year, so it's left out when the game ends this year), and one tumbling six-sided die per disaster roll (cosmetic, drawn in `src/ui/dice.ts`); no odds, roll numbers or percentages. When it lands, a short "! A flood hits." / "✓ No flood this year." line, then the continue button. The HUD and house show the pre-roll state until the dice land, so the result isn't spoiled.
   - YearReview: Cause, Effect and What helped boxes side by side. The font shrinks if needed so the dock stays clear of the HUD.
 - **FinalReport:** stats in a left column, footprint chart and quiz choices in a right column, the house (or rubble) between them.
+- **HUD tour:** at the start of each new game (`startNewGame()` / `takeHudTour()` in `session.ts`), RegionSelect first shows four short callouts (`showCoachMarks()` in `src/ui/coachMarks.ts`, text from `hudIntro()` in `copy.ts`), one each for neighbourhood footprint, bank, house value and total repair cost, each pointing at its HUD row. Next / Got it, Skip or Escape. The "Where will you live?" panel appears after it. It doesn't repeat when returning from HouseSelect.
 - **RegionSelect:** the valley map (`assets/map`) fills the screen. Each region has a label (name and hazards, drawn from game data, not the labels baked into `cartoon_regions.png`). Hovering anywhere in a region highlights it and fills the info panel in the top-right corner, below the HUD's bank box; clicking anywhere in it, or its label, selects it.
-- **HouseSelect:** the map zooms to fit the chosen region left of a solid right-hand sidebar (bank box, then the house panel), then a pin drops in for each house (`houses.json` `map.x/y`, in map-image pixels). Choosing a pin shows a preview, details and "Buy for $X"; "Back to the map" returns to RegionSelect.
+- **HouseSelect:** the map zooms into the region's crop (`zoom_data.json`), then cross-fades to the close-up art `zoom/zoom_<mapRegion>_clean.png`, top-aligned so houses near the top clear the HUD. Each house is drawn as its sprite at its `zoom_data` pin with a price tag ("$595k / Standard"); focus order is left to right. Choosing a house opens a modal window with a preview, facts, area hazard and "Buy for $X" / Close. "Back to the map" (bottom left) returns to RegionSelect. Unaffordable houses are dimmed but can still be opened, so the window can say why.
 - **Title:** plain dark background.
 
 ## Content and tone
@@ -270,6 +277,7 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
   - Never use colour as the only signal.
   - All interactions work with a keyboard: Tab/Shift+Tab or arrow keys move focus, Enter/Space chooses. Don't show on-screen key instructions.
   - Modal windows take over the keyboard (`FocusNav.enabled = false` on the main nav) and close on Escape.
+  - Confirmation dialogs for irreversible actions focus Cancel first, so a stray Enter never confirms; Escape or clicking outside also cancels.
   - Focus is shown by a thick outline plus a ▶ marker; unavailable buttons show ✕ and dimmed text, and focusing one shows why it's unavailable.
   - Only pointer movement moves focus, so a resting mouse can't steal keyboard focus when a screen opens.
   - Focused text is mirrored to an aria-live region (`#sr-live`) for screen readers.
@@ -281,6 +289,10 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
 - `areas.json` regions name their map shape with `mapRegion` (`coastal`, `riverside`, `hillysides`).
 - At boot, `buildRegionMap()` (`src/ui/regionMap.ts`) classifies every overlay pixel by nearest tint into a hit-test lookup, builds a highlight texture and bounding box per region, and fails loudly if a `mapRegion` is unknown or a house pin isn't inside its own region.
 - `MapView` (`src/ui/mapView.ts`) draws the map (cover-fit), zooms to a region and converts screen ↔ map pixels. Map labels and pins are in `src/ui/mapMarkers.ts`.
+- **Houses** (`assets/map/house_and_region_assets`): `sprites/<id>.png` (1200×900, transparent) and `sprites/<id>_zones.png` (same size; roof red, door yellow, garden green, foundation blue, walls black), `zoom/zoom_<mapRegion>_clean.png` (1600×1000 close-ups without houses) and `zoom_data.json` (crop rectangle per region, and per house a pin: position in the close-up, sprite display size, anchor, tag placement, and its spot on the overview map). Game houses link to these with `sprite` (the asset id, e.g. `riverside_bungalow`).
+- At boot, `buildHouseAssets()` (`src/ui/houseAssets.ts`) measures every zone mask (bounding box and centre per zone) and fails loudly if a house has no sprite, mask, zone or pin, or if a pin's map spot isn't inside its region.
+- `houseArt.ts` draws a code backdrop (sky, region scenery, ground) and places the sprite with its foundation line on the ground. Mod overlays, damage and markers are positioned from the zones; wall-mounted overlays use the walls and door, because on stilted and hillside houses the foundation zone runs far down the slope.
+- Unused here: `cartoon_regions.png` (baked labels), `assets/map/zoom_*.png` (same views with houses and tags painted in) and the duplicate `region_labels.json`/`cartoon2.py` inside `house_and_region_assets`.
 - `assets/map/cartoon2.py` regenerates the map. It reads `terrain.npz` and `regions_mask.png`, which aren't in the repo, and has hard-coded output paths.
 
 ## Phaser 4 notes
@@ -293,7 +305,7 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
 ## Dev helpers
 
 In `npm run dev`, `window.dev` drives the game from the console or browser tests:
-`await dev.start(regionIndex, houseIndex)`, `await dev.endYear(answerIndex)`, `await dev.nextYear()`, `dev.click(label => ...)`, `dev.state()`.
+`await dev.start(regionIndex, houseIndex)`, `await dev.answer(answerIndex)`, `await dev.endYear(answerIndex)` (answers first if the question is still open), `await dev.nextYear()`, `dev.click(label => ...)`, `dev.state()`.
 
 ## Hazard data sources
 
@@ -305,9 +317,8 @@ The odds and damage values above are game-design numbers set by the team. Hazard
 
 ## Assets
 
-- **House sprites** come from `tools/blender/house_sprites.py`.
-  - Fixed orthographic camera, transparent PNG output.
-  - Each mod gets an overlay rendered with the house as a holdout, so all layers align when stacked.
+- **House sprites** come from `assets/map/house_and_region_assets` (SVGs from `sprites.py`, rendered by `render_sprites.py`; zoomed views from `zoom.py`). Those scripts use hard-coded `/home/claude/map` paths.
+  - Each sprite has a zone mask; mod overlays are drawn in code from the zones rather than as separate sprites.
 - **Draw effects in code**, not as sprites: rain particles, rising floodwater, slip debris, screen shake.
 - **Placeholder art** may use Kenney (CC0) packs.
 - Record the licence of every third-party asset in `assets/LICENSES.md`.
@@ -318,11 +329,12 @@ The odds and damage values above are game-design numbers set by the team. Hazard
 - **Area mapping:** Hills houses never roll floods; Coastal and Urban houses never roll landslides.
 - **Damage:** single mod, stacked mods, reductions past the floor give exactly 10%, no mods gives base damage.
 - **Actions:** a mod costs 1 action, the player can't exceed `actionsPerTurn`, a permanent mod can't be applied twice.
-- **Repairs:** cost 1 action, restore exactly the original value, charge `repairCostRate` × value lost, are unavailable when the house is undamaged or the bank can't cover the cost.
+- **Repairs:** cost 1 action, restore exactly the full value (including upgrades), charge `repairCostRate` × value lost, are unavailable when the house is undamaged or the bank can't cover the cost.
 - **Money:** income is added at year start; no action can take the bank below 0.
-- **Value:** never exceeds the original value; the house is destroyed exactly when value reaches 0 or below (test 40% × 3 and 10% × 10).
+- **Value:** permanent upgrades add their cost to value and full value, consumables add nothing; value never exceeds the full value; selling returns the upgraded value; the house is destroyed exactly when value reaches 0 or below (test 40% × 3 and 10% × 10).
 - **Consumables:** used up only when their disaster hits.
 - **Footprint:** quiz delta, mod deltas, never below 0, odds use the updated value.
+- **Year's question:** each year opens with it; actions are locked until it's answered; it can be answered once a year; the answer changes the footprint only when the year ends.
 - **Outcome:** destruction ends the game as a loss immediately; surviving year N is a win; selling is blocked when no other house would be affordable or the player has already moved this year.
 - **Data:** the bundled data validates; a missing `source`, unknown area or gap between weather bands fails loudly.
 - **Determinism:** the same seed and same choices give the same game.
