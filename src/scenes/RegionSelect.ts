@@ -9,7 +9,7 @@ import { MapView } from '../ui/mapView';
 import { getRegionMap } from '../ui/regionMap';
 import { drawHUD } from '../ui/HUD';
 
-/** The valley map: Kiwi asks where to live; hover a region to hear about it, click it (or its label) to see its houses. */
+/** The valley map: Rimu asks where to live; hover a region to hear about it, click it (or its label) to see its houses. */
 export class RegionSelect extends Phaser.Scene {
   constructor() {
     super('RegionSelect');
@@ -22,7 +22,7 @@ export class RegionSelect extends Phaser.Scene {
     const map = new MapView(this);
     const hud = drawHUD(this, d, s);
 
-    // Kiwi asks where to live, and says a little about the region under the pointer or focus.
+    // Rimu asks where to live, and says a little about the region under the pointer or focus.
     const touring = { on: takeHudTour() };
     const kiwi = addKiwi(this, touring.on);
     const speak = (line: KiwiLine, spokenContext?: string) => kiwi.say(line.text, { heading: line.heading, spokenContext });
@@ -40,7 +40,7 @@ export class RegionSelect extends Phaser.Scene {
       const label = new RegionLabel(this, at.x, at.y, region.name, regionHazardLabel(d, region.id), rgbToNumber(meta.tint), {
         onFocus: () => {
           map.highlight(region.mapRegion);
-          // The label shows the name; screen readers still hear it before Kiwi's line.
+          // The label shows the name; screen readers still hear it before Rimu's line.
           speak(kiwiRegionLine(d, region), label.describe());
         },
         onActivate: () => select(region.id),
@@ -49,7 +49,7 @@ export class RegionSelect extends Phaser.Scene {
       nav.add(label);
     }
 
-    // At the start of a new game, Kiwi explains the game first, then asks where to live.
+    // At the start of a new game, Rimu explains the game first, then asks where to live.
     if (touring.on) {
       showKiwiGuide(this, kiwi, kiwiIntro(d), hud.rows, nav, () => {
         touring.on = false;
@@ -62,7 +62,7 @@ export class RegionSelect extends Phaser.Scene {
     // Anywhere inside a region works too, not just its label.
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
       if (touring.on) return;
-      if (over.length > 0) return; // over a label or Kiwi's speech bubble
+      if (over.length > 0) return; // over a label or Rimu's speech bubble
       const key = map.regionAt(p.x, p.y);
       const label = key ? labelFor.get(key) : undefined;
       if (label) nav.focus(label);

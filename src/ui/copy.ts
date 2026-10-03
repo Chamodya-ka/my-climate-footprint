@@ -220,7 +220,7 @@ export interface KiwiStep {
 export function kiwiIntro(data: GameData): KiwiStep[] {
   const { startingBudget, incomePercentOfHouseValue, actionsPerTurn } = data.balance;
   return [
-    { text: "Kia ora! I'm Kiwi. I'll show you how to keep your home safe." },
+    { text: "Kia ora! I'm Rimu. I'll show you how to keep your home safe." },
     {
       key: 'footprint',
       text: 'This is the carbon footprint. Your choices push it up or down. A bigger footprint means more floods and landslides.',
@@ -251,16 +251,11 @@ export function kiwiIntro(data: GameData): KiwiStep[] {
   ];
 }
 
-/** The title screen's pitch: a two-line tagline and a short how-to-play. */
+/** The title screen's pitch: a two-line tagline and the goal in one line. Rimu explains the rest after Start. */
 export function titleIntro(data: GameData): { tagline: string; body: string } {
   return {
     tagline: 'Your choices change how often disaster strikes.\nYour preparation decides how much it hurts.',
-    body:
-      `Buy a home in a valley-and-harbour city and keep it standing from ${data.balance.startYear} to ${lastCalendarYear(data)}.\n\n` +
-      'Each year starts with a big decision. Make the right call, ' +
-      'and floods and landslides come less often.\n\n' +
-      `Then get ready: you have ${data.balance.actionsPerTurn} actions a year to upgrade or repair. ` +
-      'Prepare for the hazards where you live, and the next storm does far less damage.',
+    body: `Buy a home and keep it standing from ${data.balance.startYear} to ${lastCalendarYear(data)}.`,
   };
 }
 
@@ -269,7 +264,7 @@ export interface KiwiLine {
   text: string;
 }
 
-/** Kiwi's question on the region map: where to live, or where to move after selling. Short sentences. */
+/** Rimu's question on the region map: where to live, or where to move after selling. Short sentences. */
 export function kiwiWhereToLive(state: GameState): KiwiLine {
   const move = state.thisYear.move;
   if (!move) {
@@ -282,21 +277,21 @@ export function kiwiWhereToLive(state: GameState): KiwiLine {
 }
 
 /**
- * Kiwi's short take on a region: what it's like and what to watch out for. It doesn't
+ * Rimu's short take on a region: what it's like and what to watch out for. It doesn't
  * repeat the region's name, which is on the map label.
  */
 export function kiwiRegionLine(data: GameData, region: Region): KiwiLine {
   return { text: `${region.blurb} Watch out for ${regionHazardLabel(data, region.id).toLowerCase()}.` };
 }
 
-/** What Kiwi says before the year's question. */
+/** What Rimu says before the year's question. */
 export function kiwiBeforeQuestion(state: GameState): string {
   return state.year === 1
     ? "Now let's see how good you are at keeping your carbon footprint down."
     : "A new year, a new decision. Let's see if you can keep your carbon footprint down.";
 }
 
-/** What Kiwi says after the question, leading into the action phase. */
+/** What Rimu says after the question, leading into the action phase. */
 export function kiwiAfterQuestion(state: GameState): string {
   const house = state.house;
   return house && house.value < house.fullValue
@@ -304,13 +299,13 @@ export function kiwiAfterQuestion(state: GameState): string {
     : "Now let's see how you could upgrade your house to handle climate disasters.";
 }
 
-/** Kiwi's one-off tip about the "+" buttons, the first time the upgrades unlock. Short sentences. */
+/** Rimu's one-off tip about the "+" buttons, the first time the upgrades unlock. Short sentences. */
 export function kiwiUpgradeTip(data: GameData): string {
   const perYear = Math.floor(data.balance.actionsPerTurn / data.balance.actionsPerMod);
   return `See the + buttons? Each one opens upgrades. Upgrades protect your house from disasters. You can only do ${perYear} each year.`;
 }
 
-/** Kiwi's one-off tip about the two year-end buttons, after the player's first upgrade. Short sentences. */
+/** Rimu's one-off tip about the two year-end buttons, after the player's first upgrade. Short sentences. */
 export function kiwiYearEndTip(): string {
   return (
     'Nice work! Now you have two options. "Sell and Move" sells this house so you can buy another. ' +

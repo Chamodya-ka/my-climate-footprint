@@ -7,7 +7,7 @@ import type { BoxRect } from './HUD';
 import { addKiwi, type KiwiBubble, type KiwiPart } from './kiwiGuide';
 import { colours, HEIGHT, WIDTH } from './theme';
 
-/** Wider than Kiwi's usual bubble, so answers fit on one or two lines. */
+/** Wider than Rimu's usual bubble, so answers fit on one or two lines. */
 const BUBBLE_W = 520;
 const BTN_H = 52;
 const ANSWER_H = 48;
@@ -16,7 +16,7 @@ const GAP = 6;
 const CONTINUE_W = 200;
 /** Inset of buttons from the bubble's sides (the bubble's own padding). */
 const SIDE = 18;
-/** How long the chosen answer stays coloured before Kiwi explains (under a second). */
+/** How long the chosen answer stays coloured before Rimu explains (under a second). */
 const VERDICT_MS = 700;
 const FADE_MS = 300;
 const PULSE_MS = 600;
@@ -29,24 +29,24 @@ export interface QuestionDialogOptions {
   question: QuizQuestion;
   /** The HUD's carbon footprint box, outlined while the question is open: the answer moves it. */
   from: BoxRect;
-  /** What Kiwi says before asking, and after explaining the answer (leading into the upgrades). */
+  /** What Rimu says before asking, and after explaining the answer (leading into the upgrades). */
   intro: string;
   outro: string;
   /** Main nav to pause until the question is answered. */
   nav: FocusNav;
   /** Called as soon as an answer is chosen, to record it. */
   onAnswer: (answerId: string) => void;
-  /** Called after the player has read the feedback and Kiwi has gone. */
+  /** Called after the player has read the feedback and Rimu has gone. */
   onDone: () => void;
 }
 
 /**
- * The year's "What would you do?" question, asked by Kiwi in its speech bubble. It can't
- * be dismissed. Kiwi first says what's coming (`intro`), then asks. The question itself
+ * The year's "What would you do?" question, asked by Rimu in its speech bubble. It can't
+ * be dismissed. Rimu first says what's coming (`intro`), then asks. The question itself
  * says nothing about footprints. Choosing an answer
  * colours it green (right), yellow (no change) or red (raises the footprint), with a ✓,
- * – or ✗, for a moment; then Kiwi explains in short sentences why, names the best answer
- * if it wasn't chosen. Last, Kiwi leads into the upgrades (`outro`) and leaves.
+ * – or ✗, for a moment; then Rimu explains in short sentences why, names the best answer
+ * if it wasn't chosen. Last, Rimu leads into the upgrades (`outro`) and leaves.
  */
 export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): void {
   opts.nav.enabled = false;
@@ -87,16 +87,16 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
     nav.focus(b);
   };
 
-  /** Kiwi says a few short paragraphs, with a button to move on. */
+  /** Rimu says a few short paragraphs, with a button to move on. */
   const sayParts = (parts: KiwiPart[], label: string, next: () => void) => {
     nav.clear(); // the old bubble's buttons go with it
     oneButton(kiwi.say(parts, { width: BUBBLE_W, footer: BTN_H }), label, next);
   };
 
-  /** Kiwi says one line, with a button to move on. */
+  /** Rimu says one line, with a button to move on. */
   const sayThen = (line: string, label: string, next: () => void) => sayParts([{ text: line }], label, next);
 
-  // Stage 3: Kiwi explains the chosen answer, then (in a bubble of its own) the best one
+  // Stage 3: Rimu explains the chosen answer, then (in a bubble of its own) the best one
   // if that wasn't chosen, then leads into the upgrades and leaves.
   const explain = (fb: QuizFeedback) => {
     nav.enabled = true;
@@ -109,7 +109,7 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
     );
   };
 
-  // Stage 2: Kiwi asks, with one answer per row.
+  // Stage 2: Rimu asks, with one answer per row.
   const ask = () => {
     nav.clear();
     const n = question.answers.length;
@@ -141,6 +141,6 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
     nav.focusIndex(0);
   };
 
-  // Stage 1: Kiwi says what's coming.
+  // Stage 1: Rimu says what's coming.
   sayThen(opts.intro, 'Next', ask);
 }

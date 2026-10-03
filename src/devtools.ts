@@ -89,16 +89,16 @@ export function installDevtools(game: Phaser.Game): void {
       await waitFor('House');
       if (session.state().phase !== 'quiz') return;
       const label = quizForYear(session.data(), session.state()).answers[answerIndex]!.label;
-      await click((l) => l === 'Next'); // Kiwi's lead-in
+      await click((l) => l === 'Next'); // Rimu's lead-in
       await click((l) => l === label);
-      // Kiwi explains the answer (and, after a wrong one, the better choice), then leads out.
+      // Rimu explains the answer (and, after a wrong one, the better choice), then leads out.
       const MAX_BUBBLES = 2;
       for (let i = 0; i < MAX_BUBBLES && !button((l) => l === "Let's go"); i++) {
         await click((l) => l === 'Next' || l === 'Continue');
       }
       await click((l) => l === "Let's go");
       await sleep(300); // the House view restarts
-      // The first time in a game, Kiwi points out the "+" buttons.
+      // The first time in a game, Rimu points out the "+" buttons.
       if (button((l) => l === 'Got it')) await click((l) => l === 'Got it');
     },
     /** Answers the question if it's still open, finishes upgrades, and waits for the review. Stops on the Roll scene if `stopAtRoll`. */

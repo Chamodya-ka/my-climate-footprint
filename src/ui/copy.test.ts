@@ -65,7 +65,7 @@ describe('quizFeedback', () => {
   });
 });
 
-describe("Kiwi's lines around the question", () => {
+describe("Rimu's lines around the question", () => {
   it('leads in before the question, differently after the first year', () => {
     const first = startedGame();
     expect(kiwiBeforeQuestion(first)).toBe("Now let's see how good you are at keeping your carbon footprint down.");
@@ -167,6 +167,7 @@ describe('kiwiIntro', () => {
 
   it('explains the carbon footprint, money and how the game works', () => {
     expect(steps.map((s) => s.key).filter(Boolean)).toEqual(['footprint', 'bank', 'houseValue', 'repairCost']);
+    expect(steps[0]!.text).toContain("I'm Rimu");
     expect(all).toMatch(/carbon footprint/);
     expect(all).toMatch(/upgrades or repairs/);
     expect(all).toMatch(/to win/);
@@ -185,7 +186,7 @@ describe('kiwiIntro', () => {
   });
 });
 
-describe("Kiwi's question on the region map", () => {
+describe("Rimu's question on the region map", () => {
   const MAX_WORDS = 16;
   const short = (text: string) => {
     for (const sentence of text.split(/(?<=[.!?])\s+/)) expect(sentence.split(/\s+/).length).toBeLessThanOrEqual(MAX_WORDS);
@@ -216,7 +217,7 @@ describe("Kiwi's question on the region map", () => {
   });
 });
 
-describe("Kiwi's tips on the House screen", () => {
+describe("Rimu's tips on the House screen", () => {
   const MAX_WORDS = 16;
   const short = (text: string) => {
     for (const sentence of text.split(/(?<=[.!?])\s+/)) expect(sentence.split(/\s+/).length).toBeLessThanOrEqual(MAX_WORDS);

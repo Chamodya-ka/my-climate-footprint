@@ -49,7 +49,7 @@ interface HouseParams {
 export class HouseScene extends Phaser.Scene {
   private params: HouseParams = {};
   private nav!: FocusNav;
-  /** The Sell and Skip / Finish buttons, for Kiwi's year-end tip. */
+  /** The Sell and Skip / Finish buttons, for Rimu's year-end tip. */
   private yearEndTargets: KiwiTarget[] = [];
 
   constructor() {
@@ -150,7 +150,7 @@ export class HouseScene extends Phaser.Scene {
       const x = (WIDTH - rowW) / 2 + i * (BTN_W + GAP);
       const y = HEIGHT - EDGE - BTN_H;
       this.nav.add(new Button(this, x, y, BTN_W, BTN_H, { ...opts, fontSize: 20 }));
-      // Kiwi's year-end tip points at Sell and at Skip / Finish, not at Repair.
+      // Rimu's year-end tip points at Sell and at Skip / Finish, not at Repair.
       if (opts.label !== REPAIR_LABEL) this.yearEndTargets.push({ x, y, w: BTN_W, h: BTN_H });
     });
     this.nav.focusIndex(this.params.focusIndex ?? 0);
@@ -180,7 +180,7 @@ export class HouseScene extends Phaser.Scene {
       // Reopened after a purchase: no grow-in animation.
       this.openWindow(reopen, d.mods.filter((m) => m.spot === reopen), this.params.focusIndex ?? 0, this.params.windowFocus ?? 0, false);
     } else if (s.phase === 'action' && s.actionsLeft > 0 && takeKiwiTip('upgrades')) {
-      // Once per game, when the upgrades first unlock: Kiwi (still here from the question) points out the "+" buttons.
+      // Once per game, when the upgrades first unlock: Rimu (still here from the question) points out the "+" buttons.
       showKiwiTip(this, { text: kiwiUpgradeTip(d), targets: markerTargets, nav: this.nav, enter: false });
     }
   }
@@ -229,7 +229,7 @@ export class HouseScene extends Phaser.Scene {
       onClose: () => {
         this.nav.enabled = true;
         this.nav.focusIndex(markerIndex);
-        // Once per game, after the first upgrade: Kiwi comes back to explain how the year ends.
+        // Once per game, after the first upgrade: Rimu comes back to explain how the year ends.
         if (state().thisYear.modsBuilt.length > 0 && takeKiwiTip('yearEnd')) {
           showKiwiTip(this, { text: kiwiYearEndTip(), targets: this.yearEndTargets, nav: this.nav, enter: true });
         }

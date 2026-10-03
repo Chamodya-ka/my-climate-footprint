@@ -26,7 +26,7 @@ const ENTER_MS = 450;
 const BOB_MS = 900;
 const BOB_PX = 4;
 const DIM = 0.5;
-/** Lighter than the introduction's dim, so the buttons Kiwi points at stay easy to see. */
+/** Lighter than the introduction's dim, so the buttons Rimu points at stay easy to see. */
 const TIP_DIM = 0.3;
 const RING_PAD = 6;
 const ARROW_GAP = 6;
@@ -108,7 +108,7 @@ export interface Kiwi {
 }
 
 /**
- * Kiwi, the guide: stands at the bottom right, facing the screen's content, and talks
+ * Rimu, the guide: stands at the bottom right, facing the screen's content, and talks
  * in a speech bubble above it. With `enter` it walks in from the edge (or fades in with
  * reduced motion); it bobs gently while it's on screen.
  */
@@ -176,7 +176,8 @@ export function addKiwi(scene: Phaser.Scene, enter: boolean): Kiwi {
       }
       layer.add(parts);
       const lead = opts.spokenContext ? `${opts.spokenContext.replace(/\.$/, '')}. ` : '';
-      announce(`${lead}Kiwi says: ${opts.heading ? `${opts.heading} ` : ''}${words}`);
+      // After the current code has run, so a button focused in the bubble doesn't replace Rimu's words.
+      queueMicrotask(() => announce(`${lead}Rimu says: ${opts.heading ? `${opts.heading} ` : ''}${words}`));
       return { layer, x, w, footerY: y + h - PAD - (opts.footer ?? 0) };
     },
     destroy() {
@@ -187,7 +188,7 @@ export function addKiwi(scene: Phaser.Scene, enter: boolean): Kiwi {
 }
 
 /**
- * Kiwi's introduction after Start: it explains the game one short step at a time.
+ * Rimu's introduction after Start: it explains the game one short step at a time.
  * Steps about a HUD box highlight it. Next / Let's go moves on; Skip or Escape ends it.
  * The screen behind is dimmed and paused until it's done; the kiwi stays afterwards.
  */
@@ -248,7 +249,7 @@ export function showKiwiGuide(
   show(0);
 }
 
-/** Something Kiwi points at: a box, or a round button (`round`). */
+/** Something Rimu points at: a box, or a round button (`round`). */
 export interface KiwiTarget extends BoxRect {
   round?: boolean;
 }
@@ -257,7 +258,7 @@ export interface KiwiTipOptions {
   text: string;
   /** What to point at: each gets a pulsing outline and a bobbing arrow above it. */
   targets: KiwiTarget[];
-  /** Main nav to pause while Kiwi talks. */
+  /** Main nav to pause while Rimu talks. */
   nav: FocusNav;
   /** Walk in (true), or already be standing there, e.g. straight after the year's question (false). */
   enter: boolean;
@@ -265,8 +266,8 @@ export interface KiwiTipOptions {
 }
 
 /**
- * A one-off tip: Kiwi points at some buttons and explains them in one short bubble.
- * The screen is lightly dimmed and paused; Got it (or Escape) sends Kiwi away.
+ * A one-off tip: Rimu points at some buttons and explains them in one short bubble.
+ * The screen is lightly dimmed and paused; Got it (or Escape) sends Rimu away.
  */
 export function showKiwiTip(scene: Phaser.Scene, opts: KiwiTipOptions): void {
   opts.nav.enabled = false;
