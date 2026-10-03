@@ -3,10 +3,13 @@ import type { HouseState } from './state';
 
 const PERCENT = 100;
 
-/** The income added at the start of a year: a share of the house's current value (lower while damaged). */
+/**
+ * The income added at the start of a year: a share of the house's original value (its
+ * purchase price). Damage and upgrades don't change it.
+ */
 export function yearlyIncome(data: GameData, house: HouseState | null): number {
   if (!house) return 0;
-  return Math.round((house.value * data.balance.incomePercentOfHouseValue) / PERCENT);
+  return Math.round((house.purchasePrice * data.balance.incomePercentOfHouseValue) / PERCENT);
 }
 
 export function repairCost(data: GameData, house: HouseState): number {

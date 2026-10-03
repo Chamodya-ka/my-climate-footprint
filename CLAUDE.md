@@ -49,7 +49,7 @@ src/
   session.ts  holds the current GameData and GameState; scenes apply sim results here
   devtools.ts dev-only console/test helpers (window.dev), never in production builds
   sim/        state.ts, turn.ts, weather.ts, damage.ts, footprint.ts, economy.ts, rng.ts,
-              advice.ts (what helped / would have helped), format.ts, *.test.ts
+              advice.ts (what helped / would have helped), format.ts, quiz.ts (question order), *.test.ts
   scenes/     Boot, Title, RegionSelect, HouseSelect, House (incl. the year's question), Roll, YearReview, FinalReport
   ui/         HUD, buttons (Button + FocusNav), panels, houseArt, houseAssets, copy, theme, a11y, icons, spots,
               regionMap + mapView + mapMarkers (the valley map), audio (music + sound effects)
@@ -63,7 +63,7 @@ tools/blender/house_sprites.py   (obsolete placeholder; house sprites now come f
 
 1. Title screen → **Region select** → **House select** → buy if within budget.
 2. **Yearly turn loop:**
-   1. **Year start:** income (`balance.incomePercentOfHouseValue`, 20%, of the house's current value) is added to the bank, and action points reset to `balance.actionsPerTurn`.
+   1. **Year start:** income (`balance.incomePercentOfHouseValue`, 20%, of the house's original value, its purchase price) is added to the bank, and action points reset to `balance.actionsPerTurn`.
    2. **The year's question:** "What would you do?" (phase `quiz`). Upgrades, repairs and selling are locked until it's answered. The answer is recorded in `thisYear.quiz`; it doesn't change the footprint yet.
    3. **Action phase:** apply modifications or repair the house (1 action each), or sell and move (returns to Region select; moving doesn't ask the question again).
    4. **End turn ("Skip Upgrades", or "Finish Upgrades" once an upgrade has been bought that year), then update the carbon footprint:** add this year's change, using the recorded answer.
@@ -197,6 +197,14 @@ The game tracks one footprint value, shown to players as the **carbon footprint*
   - The footprint never goes below `balance.minFootprint` (8 t).
   - No mod changes the footprint: planting trees has no effect on the disaster model (`footprintDelta: 0`; it still reduces landslide damage). The `footprintDelta` field stays on mods so a future mod could use it.
 - **Quiz format:** a "What would you do?" scenario with one answer per year, asked at the start of the year.
+- **Question bank and order:** `quiz.json` is a bank, larger than one game needs. When a game starts, `drawQuestionOrder()` (`src/sim/quiz.ts`) shuffles it with the seeded RNG and stores the ids in `GameState.questionOrder`; `quizForYear(data, state)` reads it (wrapping round if a game outlasts the bank). The order is balanced: it goes round the priorities in rounds, each round in a fresh shuffled order, so a 10-year game asks about every priority twice and never about the same priority two years running. History records the `questionId`, so reviews and the final report look questions up by id, never by year.
+- **Questions are built around the COP31 priorities** (`priorities` in `quiz.json`: id, name, global goal, summary). Each question names its `priority` (checked at boot) and puts the player in a role with real reach (CEO, property manager, councillor, policy maker, farmer, developer…), so the choices are bigger than one household's. The bank has five questions per priority (25 in all):
+  - **Electrification:** moving transport, heating and machinery from fossil fuels to electric power (goal: 35% electrification by 2035).
+  - **Zero waste and methane reduction:** less waste, and managing the methane it gives off (goal: slow waste growth by 50% by 2035).
+  - **Resilient cities and buildings:** buildings that use less energy and cities that cope with heatwaves and floods (goal: cut building energy use by 25% by 2035).
+  - **Green industrialisation:** reusing and recycling materials instead of new raw materials (goal: 15% circular materials use by 2035).
+  - **Awareness across all areas:** helping farmers and land managers adapt, and climate education for everyone (goal: by 2035).
+- The question itself never mentions COP31. After answering, the feedback ends with the priority and its goal ("COP31 priority: <name>. Goal: …", `cop31Line()` in `copy.ts`). Answer labels stay short (they fit two lines on a 64 px button).
 - **Every question has exactly 4 answers:** 1 correct (−0.25 t), 1 neutral (0 t) and 2 wrong (+0.5 t). The kinds, counts and deltas live in `balance.quizAnswers`; each answer's `footprintDelta` in `quiz.json` must be one of them, and boot fails loudly if a question has a different mix. Vary where the correct answer sits, so it isn't always first.
 - **Question dialog** (`src/ui/questionDialog.ts`): a speech bubble that grows out of the HUD's carbon footprint box (which pulses while it's open), over the dimmed house. It can't be dismissed. Before answering it shows only the question and answers: no hint of how an answer changes the footprint. After answering, the same bubble shows short feedback (`quizFeedback()` in `src/ui/copy.ts`): ✓/✗ whether the choice was correct (correct = the lowest `footprintDelta` among the options; ties count; a wrong answer names the best one), which way it moves the carbon footprint ("Assuming everyone makes the same choice you do, the carbon footprint would go down."), and the chosen option ("▶ label") with its `explanation` from `quiz.json`. Other options aren't explained, and the feedback shows no tonne figures. At the same moment the HUD shows the change arrow. Continue closes it and unlocks the upgrades.
 
@@ -204,13 +212,14 @@ Example entry in `quiz.json`:
 
 ```json
 {
-  "id": "commute-1",
-  "prompt": "Would you change your habits? How will you get to work this year?",
+  "id": "fleet-ceo",
+  "priority": "electrification",
+  "prompt": "You're the CEO of a courier company. Your fleet of diesel vans is due to be replaced. What do you do?",
   "answers": [
-    { "id": "cycle",   "label": "Cycle",                "footprintDelta": -0.25, "explanation": "..." },
-    { "id": "drive",   "label": "Drive",                "footprintDelta":  0.5,  "explanation": "..." },
-    { "id": "carpool", "label": "Carpool",              "footprintDelta":  0,    "explanation": "..." },
-    { "id": "taxi",    "label": "Take a taxi each day", "footprintDelta":  0.5,  "explanation": "..." }
+    { "id": "keep-old",      "label": "Keep the old vans running", "footprintDelta":  0,    "explanation": "..." },
+    { "id": "new-diesel",    "label": "Buy new diesel vans",       "footprintDelta":  0.5,  "explanation": "..." },
+    { "id": "electric",      "label": "Switch to electric vans",   "footprintDelta": -0.25, "explanation": "..." },
+    { "id": "bigger-trucks", "label": "Buy bigger diesel trucks",  "footprintDelta":  0.5,  "explanation": "..." }
   ],
   "source": "placeholder"
 }
@@ -238,7 +247,7 @@ Example entry in `quiz.json`:
 ## Money and value
 
 - The player starts with `balance.startingBudget` ($1,500,000).
-- **Income:** each year starts with `balance.incomePercentOfHouseValue` (20%) of the house's **current** value added to the bank (`yearlyIncome()` in `src/sim/economy.ts`, rounded to whole dollars). Upgrades raise it; unrepaired damage lowers it, so leaving a house damaged also costs income.
+- **Income:** each year starts with `balance.incomePercentOfHouseValue` (20%) of the house's **original value** (`purchasePrice`) added to the bank (`yearlyIncome()` in `src/sim/economy.ts`, rounded to whole dollars). Damage and upgrades don't change it; moving changes it to the new house's price.
   - The core money decision is how to split limited income between preparing (mods) and recovering (repairs).
 - The bank pays for houses, modifications and repairs.
 - **The bank never goes negative.** Disable any action the player can't afford, and say why.
@@ -261,7 +270,7 @@ Example entry in `quiz.json`:
 
 - **House, Roll, YearReview:** the player's house is drawn full screen as the background (`FULL_SCREEN_ART` / `drawBackdrop` in `src/ui/houseArt.ts`). Content sits along the bottom, so the house stays visible above it.
   - House: round "+" markers on the house open upgrade windows, one per zone of the house sprite: door (seal doors, sandbags, store food), foundation (foundation improvement, elevate) and garden (drainage, retaining wall, soil nailing, planting trees, drainage over loose soil). The roof zone has no marker (solar panels are out; open question 4). Each mod's `spot` in `mods.json` decides its marker; positions come from the sprite's measured zones via `spotPositions()` in `houseArt.ts`. Markers have no text label; the spot name and upgrades in place (e.g. "Door upgrades, 1/3 in place") are announced to screen readers on focus. The upgrades open in a compact popover (`openPopover()` in `src/ui/popover.ts`) that grows out of its "+" marker with a tail pointing at it (above the marker if it fits, else below, else beside it; kept on screen); the house isn't dimmed. It's titled "Property Upgrades" (never the zone name), with "You have N upgrade(s) left for this year." below, and lists that spot's mods, each with its icon, price (or why it can't be bought) and a tooltip. A round red × on its top-right corner closes it (`CloseIcon` in `src/ui/closeIcon.ts`, focusable like any button; the × shape carries the meaning, not just the red); so do Escape and clicking outside. It's modal for the keyboard, and reopens in place, without the grow-in, after a purchase. Keep the House view minimal: no text panel, just single-line buttons (no subtext) tiled horizontally and centred along the bottom: "Repair the house" (only while the house is damaged; shown with ✕ if unaffordable, and the reason is announced on focus or click), "Sell and Move" (asks for confirmation first, via `confirmDialog()` in `src/ui/confirm.ts`) and "Skip Upgrades" / "Finish Upgrades" (the label changes once an upgrade is bought that year; either ends the action phase and rolls the weather). Repair cost is in the HUD.
-  - Roll: "One year goes by…" with "You have earned" and, below that, the bank icon and next year's income (e.g. "+$130,000": 20% of the house's value after this year's damage; income actually arrives at the start of next year, so it's left out when the game ends this year), and a desk calendar (cosmetic, drawn in `src/ui/calendar.ts`) whose pages flip from January to December to show the year passing; no odds, roll numbers or percentages. The same light rain falls every year while it flips, so the weather doesn't give the outcome away. Once it reaches December, a short line beside it (`yearVerdict()` in `copy.ts`): "Unfortunately, a flood hits your home." (naming every disaster that hit), or "You were lucky: there were no climate disasters this year." (never naming the disaster that didn't happen); no ✓/! marks, the words carry the meaning. A hit then plays the designer's flood or landslip animation over the house (see Assets), then the continue button. The HUD and house show the pre-roll state until then, so the result isn't spoiled.
+  - Roll: "One year goes by…" with "You have earned" and, below that, the bank icon and next year's income (e.g. "+$130,000": 20% of the house's purchase price; income actually arrives at the start of next year, so it's left out when the game ends this year), and a desk calendar (cosmetic, drawn in `src/ui/calendar.ts`) whose pages flip from January to December to show the year passing; no odds, roll numbers or percentages. The same light rain falls every year while it flips, so the weather doesn't give the outcome away. Once it reaches December, a short line beside it (`yearVerdict()` in `copy.ts`): "Unfortunately, a flood hits your home." (naming every disaster that hit), or "You were lucky: there were no climate disasters this year." (never naming the disaster that didn't happen); no ✓/! marks, the words carry the meaning. A hit then plays the designer's flood or landslip animation over the house (see Assets), then the continue button. The HUD and house show the pre-roll state until then, so the result isn't spoiled.
   - YearReview: Cause, Effect and What helped boxes side by side. The font shrinks if needed so the dock stays clear of the HUD.
 - **FinalReport:** stats in a left column, footprint chart and quiz choices in a right column, the house (or rubble) between them.
 - **HUD tour:** at the start of each new game (`startNewGame()` / `takeHudTour()` in `session.ts`), RegionSelect first shows four short callouts (`showCoachMarks()` in `src/ui/coachMarks.ts`, text from `hudIntro()` in `copy.ts`), one each for carbon footprint, bank, house value and total repair cost, each pointing at its HUD row. Next / Got it, Skip or Escape. The "Where will you live?" panel appears after it. It doesn't repeat when returning from HouseSelect.
@@ -355,7 +364,7 @@ The odds and damage values above are game-design numbers set by the team. Hazard
 - **Damage:** single mod, stacked mods, reductions past the floor give exactly 10%, no mods gives base damage.
 - **Actions:** a mod costs 1 action, the player can't exceed `actionsPerTurn`, a permanent mod can't be applied twice.
 - **Repairs:** cost 1 action, restore exactly the full value (including upgrades), charge `repairCostRate` × value lost, are unavailable when the house is undamaged or the bank can't cover the cost.
-- **Money:** income is added at year start and is `incomePercentOfHouseValue` of the current house value (lower while damaged); no action can take the bank below 0.
+- **Money:** income is added at year start and is `incomePercentOfHouseValue` of the house's purchase price (damage and upgrades don't change it); no action can take the bank below 0.
 - **Value:** permanent upgrades add their cost to value and full value, consumables add nothing; value never exceeds the full value; selling returns the upgraded value; the house is destroyed exactly when value reaches 0 or below (test 40% × 3 and 10% × 10).
 - **Consumables:** used up only when their disaster hits.
 - **Unrepaired hits:** each hit adds one, a repair resets to 0, a year with no disaster leaves it unchanged.
@@ -363,6 +372,7 @@ The odds and damage values above are game-design numbers set by the team. Hazard
 - **Year's question:** each year opens with it; actions are locked until it's answered; it can be answered once a year; the answer changes the footprint only when the year ends.
 - **Outcome:** destruction ends the game as a loss immediately; surviving year N is a win; selling is blocked when no other house would be affordable or the player has already moved this year.
 - **Data:** the bundled data validates; a missing `source`, unknown area or gap between weather bands fails loudly.
+- **Question order:** every bank question used once, same seed gives the same order, different seeds differ, every priority comes up before any repeats, never the same priority two years running.
 - **Determinism:** the same seed and same choices give the same game.
 
 ## Open questions

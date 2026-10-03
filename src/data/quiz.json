@@ -1,311 +1,838 @@
 {
+  "priorities": [
+    {
+      "id": "electrification",
+      "name": "Electrification",
+      "goal": "35% electrification worldwide by 2035.",
+      "summary": "Moving transport, heating and machinery off fossil fuels and onto electric power.",
+      "source": "COP31 priorities"
+    },
+    {
+      "id": "zero-waste",
+      "name": "Zero waste and methane reduction",
+      "goal": "Slow the growth of waste by 50% by 2035.",
+      "summary": "Throwing less away, and managing the methane that waste gives off as it breaks down.",
+      "source": "COP31 priorities"
+    },
+    {
+      "id": "resilient-cities",
+      "name": "Resilient cities and buildings",
+      "goal": "Cut the energy buildings use by 25% by 2035.",
+      "summary": "Buildings that use less energy, and cities that cope better with heatwaves, floods and other extremes.",
+      "source": "COP31 priorities"
+    },
+    {
+      "id": "green-industry",
+      "name": "Green industrialisation",
+      "goal": "15% of materials used are circular (reused or recycled) by 2035.",
+      "summary": "Manufacturers and producers reusing and recycling materials instead of relying on new raw materials.",
+      "source": "COP31 priorities"
+    },
+    {
+      "id": "awareness",
+      "name": "Awareness across all areas",
+      "goal": "Climate-resilient farming, and climate education reaching all of society, by 2035.",
+      "summary": "Helping farmers and land managers adapt, and making climate knowledge easy for everyone to find.",
+      "source": "COP31 priorities"
+    }
+  ],
   "questions": [
     {
-      "id": "commute-1",
-      "prompt": "Would you change your habits? How will you get to work this year?",
+      "id": "fleet-ceo",
+      "priority": "electrification",
+      "prompt": "You're the CEO of a courier company. Your fleet of diesel vans is due to be replaced. What do you do?",
       "answers": [
         {
-          "id": "cycle",
-          "label": "Cycle",
-          "footprintDelta": -0.25,
-          "explanation": "No fuel at all, and it keeps you fit. The lowest-carbon way to get to work."
-        },
-        {
-          "id": "drive",
-          "label": "Drive",
-          "footprintDelta": 0.5,
-          "explanation": "Driving alone burns the most fuel per person of any option here."
-        },
-        {
-          "id": "carpool",
-          "label": "Carpool",
+          "id": "keep-old",
+          "label": "Keep the old vans running",
           "footprintDelta": 0.0,
-          "explanation": "Sharing a car halves each person's emissions, but it still burns petrol every day."
+          "explanation": "Nothing gets worse, but nothing improves either, and old diesels get less efficient with age."
         },
         {
-          "id": "taxi",
-          "label": "Take a taxi each day",
+          "id": "new-diesel",
+          "label": "Buy new diesel vans",
           "footprintDelta": 0.5,
-          "explanation": "A taxi burns as much fuel as driving yourself, plus the empty trips between fares."
+          "explanation": "This locks in another ten or more years of burning diesel on every delivery."
+        },
+        {
+          "id": "electric",
+          "label": "Switch to electric vans",
+          "footprintDelta": -0.25,
+          "explanation": "Electric vans charged from a mostly renewable grid cut the fleet's emissions to a fraction, and they're cheaper to run."
+        },
+        {
+          "id": "bigger-trucks",
+          "label": "Buy bigger diesel trucks",
+          "footprintDelta": 0.5,
+          "explanation": "Heavier diesel trucks burn more fuel per kilometre, and many deliveries don't fill them."
         }
       ],
       "source": "placeholder"
     },
     {
-      "id": "power-1",
-      "prompt": "Your power plan is up for renewal. What do you pick?",
+      "id": "rental-manager",
+      "priority": "resilient-cities",
+      "prompt": "You're a property manager looking after 40 older rental homes. Your maintenance budget has room for one big project. What is it?",
       "answers": [
         {
-          "id": "same",
-          "label": "Keep things as they are",
-          "footprintDelta": 0.0,
-          "explanation": "Nothing changes, so neither does the carbon footprint."
-        },
-        {
-          "id": "renewable",
-          "label": "A 100% renewable plan",
-          "footprintDelta": -0.25,
-          "explanation": "Power from wind, sun and water instead of burning gas or coal."
-        },
-        {
-          "id": "gas-heater",
-          "label": "Add a gas patio heater",
+          "id": "gas-heaters",
+          "label": "Fit gas heaters in every home",
           "footprintDelta": 0.5,
-          "explanation": "Heating outdoor air with gas burns fuel for very little warmth."
-        },
-        {
-          "id": "spa",
-          "label": "Install a gas-heated spa pool",
-          "footprintDelta": 0.5,
-          "explanation": "Keeping a spa pool hot with gas burns fuel all year round."
-        }
-      ],
-      "source": "placeholder"
-    },
-    {
-      "id": "food-1",
-      "prompt": "Planning the week's meals. What's on the menu?",
-      "answers": [
-        {
-          "id": "red-meat",
-          "label": "Red meat most nights",
-          "footprintDelta": 0.5,
-          "explanation": "Beef and lamb produce a lot of methane and need far more land and feed than other foods."
-        },
-        {
-          "id": "mixed",
-          "label": "A bit of everything",
-          "footprintDelta": 0.0,
-          "explanation": "A balanced plate, but the meat still adds to the footprint."
-        },
-        {
-          "id": "imported",
-          "label": "Mostly imported, air-freighted treats",
-          "footprintDelta": 0.5,
-          "explanation": "Food flown in from overseas burns a lot of fuel to reach your plate."
-        },
-        {
-          "id": "local-veg",
-          "label": "Mostly local vegetables",
-          "footprintDelta": -0.25,
-          "explanation": "Vegetables take far less land, water and energy to grow than meat, and local food travels less."
-        }
-      ],
-      "source": "placeholder"
-    },
-    {
-      "id": "holiday-1",
-      "prompt": "Time for a summer break. Where are you heading?",
-      "answers": [
-        {
-          "id": "staycation",
-          "label": "Explore the local bush tracks",
-          "footprintDelta": -0.25,
-          "explanation": "Exploring close to home uses little fuel and keeps money in the local area."
-        },
-        {
-          "id": "train-trip",
-          "label": "A train trip to the next town",
-          "footprintDelta": 0.0,
-          "explanation": "Trains are an efficient way to travel, though the trip still uses some energy."
-        },
-        {
-          "id": "road-trip",
-          "label": "A long road trip around the country",
-          "footprintDelta": 0.5,
-          "explanation": "Long drives burn plenty of petrol."
-        },
-        {
-          "id": "long-haul",
-          "label": "A long-haul flight overseas",
-          "footprintDelta": 0.5,
-          "explanation": "Flying long distances burns a huge amount of fuel; one trip can outweigh a year of driving."
-        }
-      ],
-      "source": "placeholder"
-    },
-    {
-      "id": "waste-1",
-      "prompt": "The council offers a free compost bin. Do you take it?",
-      "answers": [
-        {
-          "id": "maybe",
-          "label": "Take it, but rarely use it",
-          "footprintDelta": 0.0,
-          "explanation": "A bin that sits unused doesn't keep scraps out of landfill."
-        },
-        {
-          "id": "landfill",
-          "label": "No thanks, it all goes in the bin",
-          "footprintDelta": 0.5,
-          "explanation": "Food waste in landfill breaks down without air and releases methane, a strong greenhouse gas."
-        },
-        {
-          "id": "compost",
-          "label": "Yes, and start composting",
-          "footprintDelta": -0.25,
-          "explanation": "Food scraps in landfill rot into methane. Composting turns them into soil instead."
-        },
-        {
-          "id": "burn",
-          "label": "No thanks, I burn my garden waste",
-          "footprintDelta": 0.5,
-          "explanation": "Burning green waste releases its carbon straight into the air, along with smoke."
-        }
-      ],
-      "source": "placeholder"
-    },
-    {
-      "id": "car-1",
-      "prompt": "Your old car needs replacing. What do you buy?",
-      "answers": [
-        {
-          "id": "ute",
-          "label": "A big petrol ute",
-          "footprintDelta": 0.5,
-          "explanation": "Big petrol vehicles burn the most fuel every kilometre."
-        },
-        {
-          "id": "ebike",
-          "label": "An e-bike instead",
-          "footprintDelta": -0.25,
-          "explanation": "An e-bike uses a tiny amount of electricity and replaces many short car trips."
-        },
-        {
-          "id": "suv",
-          "label": "A large petrol SUV",
-          "footprintDelta": 0.5,
-          "explanation": "A heavy petrol SUV burns far more fuel than a small car."
-        },
-        {
-          "id": "hybrid",
-          "label": "A hybrid",
-          "footprintDelta": 0.0,
-          "explanation": "A hybrid uses less petrol than a regular car, but still burns it."
-        }
-      ],
-      "source": "placeholder"
-    },
-    {
-      "id": "heating-1",
-      "prompt": "Winter is coming. How will you keep the house warm?",
-      "answers": [
-        {
-          "id": "heat-pump",
-          "label": "Just a heat pump",
-          "footprintDelta": 0.0,
-          "explanation": "Heat pumps are very efficient, but an uninsulated house lets much of the heat escape."
+          "explanation": "Gas heaters burn fossil fuel all winter, and in draughty homes much of the heat escapes."
         },
         {
           "id": "insulate",
-          "label": "Insulate and use a heat pump",
+          "label": "Insulate and fit heat pumps",
           "footprintDelta": -0.25,
-          "explanation": "Insulation keeps the heat in, so an efficient heat pump has far less work to do."
+          "explanation": "Insulation keeps the heat in, so an efficient heat pump needs far less energy to keep tenants warm and dry."
         },
         {
-          "id": "gas",
-          "label": "Gas heater on all day",
+          "id": "pave",
+          "label": "Pave the gardens for parking",
           "footprintDelta": 0.5,
-          "explanation": "Burning gas all day releases carbon dioxide the whole time it's on."
+          "explanation": "Hard surfaces send rain straight into the drains, making surface flooding worse in a downpour."
+        },
+        {
+          "id": "as-needed",
+          "label": "Fix things as tenants report them",
+          "footprintDelta": 0.0,
+          "explanation": "The homes keep working, but they stay cold, damp and expensive to heat."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "council-waste",
+      "priority": "zero-waste",
+      "prompt": "You chair the council's waste committee. The landfill is filling up fast. What do you propose?",
+      "answers": [
+        {
+          "id": "campaign",
+          "label": "Run a 'waste less' campaign",
+          "footprintDelta": 0.0,
+          "explanation": "Awareness helps a little, but without new services most food scraps still end up in landfill."
+        },
+        {
+          "id": "cut-recycling",
+          "label": "Cut recycling to save money",
+          "footprintDelta": 0.5,
+          "explanation": "Everything that was being recycled now goes to landfill, and the landfill fills even faster."
+        },
+        {
+          "id": "expand",
+          "label": "Expand the landfill",
+          "footprintDelta": 0.5,
+          "explanation": "More landfill means more food scraps rotting without air and giving off methane, a powerful greenhouse gas."
+        },
+        {
+          "id": "food-scraps",
+          "label": "Collect food scraps, capture landfill gas",
+          "footprintDelta": -0.25,
+          "explanation": "Food scraps become compost instead of methane, and capturing the gas from old waste stops it escaping."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "packaging-owner",
+      "priority": "green-industry",
+      "prompt": "You own a packaging factory. A big customer wants cheaper boxes and wrapping. How do you respond?",
+      "answers": [
+        {
+          "id": "recycled",
+          "label": "Use recycled material, take back packaging",
+          "footprintDelta": -0.25,
+          "explanation": "Recycled material needs far less energy than new, and taking packaging back keeps it in use instead of in landfill."
+        },
+        {
+          "id": "plastic",
+          "label": "Switch to cheap single-use plastic",
+          "footprintDelta": 0.5,
+          "explanation": "New plastic is made from oil and gas, and single-use wrapping is thrown away within days."
+        },
+        {
+          "id": "same",
+          "label": "Keep using the same materials",
+          "footprintDelta": 0.0,
+          "explanation": "Nothing changes: the factory keeps relying on new raw materials."
+        },
+        {
+          "id": "offcuts",
+          "label": "Bin off-cuts to speed up the line",
+          "footprintDelta": 0.5,
+          "explanation": "Usable material is wasted, so even more new material has to be made to replace it."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "hill-farmer",
+      "priority": "awareness",
+      "prompt": "You run a sheep and beef farm on steep hill country. After a wet winter, slips have scarred several paddocks. What do you do?",
+      "answers": [
+        {
+          "id": "more-stock",
+          "label": "Run more stock on the hills",
+          "footprintDelta": 0.5,
+          "explanation": "More animals mean more methane, and heavier grazing leaves the slopes even more likely to slip."
+        },
+        {
+          "id": "as-always",
+          "label": "Farm the way the family always has",
+          "footprintDelta": 0.0,
+          "explanation": "The farm carries on, but the slopes stay as exposed to the next big storm as they are now."
+        },
+        {
+          "id": "plant-learn",
+          "label": "Plant trees on slopes, join a farm climate group",
+          "footprintDelta": -0.25,
+          "explanation": "Trees hold the soil and take in carbon, and learning from other farmers spreads ideas that work."
+        },
+        {
+          "id": "clear-bush",
+          "label": "Clear the bush for more pasture",
+          "footprintDelta": 0.5,
+          "explanation": "Clearing bush releases the carbon it stores and removes the roots that hold the hillside together."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "transport-policy",
+      "priority": "electrification",
+      "prompt": "You're a regional councillor setting the transport budget for the next ten years. What do you back?",
+      "answers": [
+        {
+          "id": "motorway",
+          "label": "A new motorway",
+          "footprintDelta": 0.5,
+          "explanation": "New roads tend to fill with more traffic, so emissions go up."
+        },
+        {
+          "id": "electric-buses",
+          "label": "Electric buses and frequent routes",
+          "footprintDelta": -0.25,
+          "explanation": "Frequent, electric public transport gives people a clean option that's quicker than sitting in traffic."
+        },
+        {
+          "id": "unchanged",
+          "label": "Keep the budget as it is",
+          "footprintDelta": 0.0,
+          "explanation": "Nothing changes: most trips stay in petrol and diesel vehicles."
+        },
+        {
+          "id": "cut-services",
+          "label": "Cut bus services to lower rates",
+          "footprintDelta": 0.5,
+          "explanation": "Fewer buses push more people into cars, so more fuel is burned every day."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "developer",
+      "priority": "resilient-cities",
+      "prompt": "You're a property developer planning a new subdivision of 200 homes. Where and how do you build?",
+      "answers": [
+        {
+          "id": "minimum",
+          "label": "Build to the minimum standard",
+          "footprintDelta": 0.0,
+          "explanation": "The homes are legal, but they'll use more energy than they need to and cope poorly with extremes."
+        },
+        {
+          "id": "wetland",
+          "label": "Fill in the wetland to fit more homes",
+          "footprintDelta": 0.5,
+          "explanation": "Wetlands soak up floodwater and store carbon. Filling one in loses both."
+        },
+        {
+          "id": "river-flats",
+          "label": "Build on cheap land on the river flats",
+          "footprintDelta": 0.5,
+          "explanation": "Homes on the flood plain put families in harm's way, and repairing them after every flood uses lots of energy and materials."
+        },
+        {
+          "id": "efficient-safe",
+          "label": "Efficient homes on higher ground",
+          "footprintDelta": -0.25,
+          "explanation": "Well-insulated homes use less energy, and keeping clear of the flood plain, with rain gardens, keeps people and water apart."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "supermarket-ceo",
+      "priority": "zero-waste",
+      "prompt": "You're the CEO of a supermarket chain. Each store throws out tonnes of unsold food every week. What's your plan?",
+      "answers": [
+        {
+          "id": "donate",
+          "label": "Donate surplus food and compost the rest",
+          "footprintDelta": -0.25,
+          "explanation": "Food reaches people who need it, and what's left becomes compost instead of methane in landfill."
+        },
+        {
+          "id": "overstock",
+          "label": "Overstock so the shelves always look full",
+          "footprintDelta": 0.5,
+          "explanation": "Ordering more than you sell means even more food is thrown away."
+        },
+        {
+          "id": "discount",
+          "label": "Discount food near its use-by date",
+          "footprintDelta": 0.0,
+          "explanation": "Some food sells, but whatever is left still goes to landfill."
+        },
+        {
+          "id": "landfill",
+          "label": "Keep sending it all to landfill",
+          "footprintDelta": 0.5,
+          "explanation": "Rotting food in landfill gives off methane, a greenhouse gas many times stronger than carbon dioxide."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "education-policy",
+      "priority": "awareness",
+      "prompt": "You're a policy maker reviewing the school curriculum. Where does climate learning fit?",
+      "answers": [
+        {
+          "id": "leave-it",
+          "label": "Leave it to keen science teachers",
+          "footprintDelta": 0.0,
+          "explanation": "Some students learn a lot, but many leave school without the basics."
+        },
+        {
+          "id": "every-level",
+          "label": "Teach it at every level, with hazard maps",
+          "footprintDelta": -0.25,
+          "explanation": "Students who understand climate and local hazards make better choices at home, at work and in their communities."
+        },
+        {
+          "id": "drop",
+          "label": "Drop it to make room for other subjects",
+          "footprintDelta": 0.5,
+          "explanation": "A generation leaves school without the knowledge to adapt or to cut emissions."
+        },
+        {
+          "id": "cut-gardens",
+          "label": "Cut school gardens and recycling schemes",
+          "footprintDelta": 0.5,
+          "explanation": "Hands-on projects that teach students to waste less and grow food are lost."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "construction-ceo",
+      "priority": "green-industry",
+      "prompt": "You're the CEO of a construction company about to demolish an old office block. What happens to the materials?",
+      "answers": [
+        {
+          "id": "new-only",
+          "label": "Use only new steel and concrete",
+          "footprintDelta": 0.5,
+          "explanation": "Making new steel and cement releases a lot of carbon, so ignoring reuse adds to the footprint."
+        },
+        {
+          "id": "easy-bits",
+          "label": "Recycle only what's easy",
+          "footprintDelta": 0.0,
+          "explanation": "Some material is saved, but most of it still becomes waste."
+        },
+        {
+          "id": "salvage",
+          "label": "Salvage and reuse timber, steel and concrete",
+          "footprintDelta": -0.25,
+          "explanation": "Reusing materials avoids the energy and emissions of making new ones, and keeps them out of landfill."
+        },
+        {
+          "id": "dump",
+          "label": "Send it all to landfill, it's faster",
+          "footprintDelta": 0.5,
+          "explanation": "Valuable materials are buried, and new ones have to be made in their place."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "hospital-boilers",
+      "priority": "electrification",
+      "prompt": "You manage a large hospital. Its old gas boilers are failing. What replaces them?",
+      "answers": [
+        {
+          "id": "patch",
+          "label": "Patch up the old boilers",
+          "footprintDelta": 0.0,
+          "explanation": "The hospital stays warm for now, but it keeps burning gas, and the boilers keep breaking down."
+        },
+        {
+          "id": "new-gas",
+          "label": "New gas boilers",
+          "footprintDelta": 0.5,
+          "explanation": "This locks in decades more of burning gas to heat the building."
+        },
+        {
+          "id": "heat-pumps",
+          "label": "Electric heat pumps",
+          "footprintDelta": -0.25,
+          "explanation": "Heat pumps move heat instead of making it, using a fraction of the energy, and run on mostly renewable power."
         },
         {
           "id": "coal",
-          "label": "An open coal fire",
+          "label": "A coal boiler, as the fuel is cheap",
           "footprintDelta": 0.5,
-          "explanation": "Coal is one of the most carbon-heavy fuels, and open fires send much of the heat up the chimney."
+          "explanation": "Coal is the most carbon-heavy fuel there is, and burning it also pollutes the air around the hospital."
         }
       ],
       "source": "placeholder"
     },
     {
-      "id": "shopping-1",
-      "prompt": "Your phone still works, but a new model is out. What do you do?",
+      "id": "port-ceo",
+      "priority": "electrification",
+      "prompt": "You're the CEO of a busy sea port. Trade is growing, and the cranes and yard trucks all run on diesel. What do you invest in?",
       "answers": [
         {
-          "id": "upgrade",
-          "label": "Upgrade to the newest model",
+          "id": "more-diesel",
+          "label": "More diesel trucks for the growth",
           "footprintDelta": 0.5,
-          "explanation": "Making a new phone uses lots of energy and materials, even when the old one still works."
+          "explanation": "More diesel machines means more fuel burned every shift."
         },
         {
-          "id": "refurb",
-          "label": "Buy a refurbished one",
-          "footprintDelta": 0.0,
-          "explanation": "Reusing a phone avoids most of the cost of making a new one, but still adds a little."
-        },
-        {
-          "id": "keep",
-          "label": "Keep using it",
+          "id": "electrify",
+          "label": "Electric cranes, trucks and shore power",
           "footprintDelta": -0.25,
-          "explanation": "Most of a phone's footprint comes from making it, so using it longer is the cleanest option."
+          "explanation": "Electric machinery runs cleaner and quieter, and shore power lets docked ships switch their engines off."
         },
         {
-          "id": "two-phones",
-          "label": "Buy the new one and keep the old as a spare",
+          "id": "idle-ships",
+          "label": "Let ships idle their engines at the wharf",
           "footprintDelta": 0.5,
-          "explanation": "A second phone means making a new one while the old one sits in a drawer."
+          "explanation": "Ships burning fuel while tied up add emissions and fumes right next to the city."
+        },
+        {
+          "id": "as-is",
+          "label": "Keep the current machinery",
+          "footprintDelta": 0.0,
+          "explanation": "Nothing gets worse, but the port keeps running on diesel as it grows."
         }
       ],
       "source": "placeholder"
     },
     {
-      "id": "community-1",
-      "prompt": "Neighbours are organising a weekend tree-planting day. Do you join?",
+      "id": "site-manager",
+      "priority": "electrification",
+      "prompt": "You manage a big building site. Diesel generators power everything. What do you do for the next project?",
       "answers": [
         {
-          "id": "join",
-          "label": "Join and bring friends",
-          "footprintDelta": -0.25,
-          "explanation": "More hands means more trees, and trees take in carbon as they grow."
+          "id": "idle",
+          "label": "Leave the generators idling all day",
+          "footprintDelta": 0.5,
+          "explanation": "Idling generators burn diesel even when nothing needs power."
         },
         {
-          "id": "skip",
-          "label": "Skip it this time",
+          "id": "more-generators",
+          "label": "Hire extra diesel generators",
+          "footprintDelta": 0.5,
+          "explanation": "More generators means more diesel burned for the whole project."
+        },
+        {
+          "id": "same-kit",
+          "label": "Use the same generators as before",
           "footprintDelta": 0.0,
-          "explanation": "No harm done, but no trees planted either."
+          "explanation": "Nothing changes: the site keeps running on diesel."
         },
         {
-          "id": "drive-away",
-          "label": "Skip it and go for a long drive",
-          "footprintDelta": 0.5,
-          "explanation": "A long drive for fun burns fuel, and no trees get planted."
-        },
-        {
-          "id": "clear",
-          "label": "Clear the bush on your section instead",
-          "footprintDelta": 0.5,
-          "explanation": "Clearing plants releases the carbon they store and leaves the soil bare."
+          "id": "grid-electric",
+          "label": "Connect to the grid, use electric machinery",
+          "footprintDelta": -0.25,
+          "explanation": "Grid power and electric machinery cut fuel use, noise and fumes on site."
         }
       ],
       "source": "placeholder"
     },
     {
-      "id": "commute-2",
-      "prompt": "Your work offers a work-from-home day each week. Do you take it?",
+      "id": "cafe-owner",
+      "priority": "zero-waste",
+      "prompt": "You own a chain of cafés that goes through thousands of takeaway cups a day. What changes?",
       "answers": [
         {
-          "id": "no",
-          "label": "No, I'll keep driving in",
-          "footprintDelta": 0.5,
-          "explanation": "Driving in every day keeps the commute's emissions going all year."
-        },
-        {
-          "id": "sometimes",
-          "label": "Now and then",
+          "id": "same-cups",
+          "label": "Keep the same cups",
           "footprintDelta": 0.0,
-          "explanation": "Occasional days at home help a little, but most trips still happen."
+          "explanation": "Nothing changes: thousands of cups still go in the bin every day."
         },
         {
-          "id": "drive-lunch",
-          "label": "Yes, but drive out for lunch",
-          "footprintDelta": 0.5,
-          "explanation": "Driving out for lunch adds a car trip, so the day at home saves little."
-        },
-        {
-          "id": "wfh",
-          "label": "Yes, and walk to the local café",
+          "id": "reusable",
+          "label": "A reusable cup scheme, and compost scraps",
           "footprintDelta": -0.25,
-          "explanation": "Skipping the commute one day a week saves that trip's fuel, and walking adds none."
+          "explanation": "Reusable cups replace thousands of throwaway ones, and composting keeps coffee grounds out of landfill."
+        },
+        {
+          "id": "extra-packaging",
+          "label": "Add free lids, sleeves and straws",
+          "footprintDelta": 0.5,
+          "explanation": "Extra single-use items mean even more rubbish for every coffee sold."
+        },
+        {
+          "id": "plastic-lined",
+          "label": "Cheaper plastic-lined cups",
+          "footprintDelta": 0.5,
+          "explanation": "Plastic-lined cups can't be recycled or composted, so every one ends up in landfill."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "festival-organiser",
+      "priority": "zero-waste",
+      "prompt": "You're organising a summer festival for 20,000 people. How do you handle food and drink?",
+      "answers": [
+        {
+          "id": "reusables",
+          "label": "Reusable cups and plates, food-scrap bins",
+          "footprintDelta": -0.25,
+          "explanation": "Washing and reusing cuts the rubbish to a fraction, and food scraps become compost instead of methane."
+        },
+        {
+          "id": "single-use",
+          "label": "Single-use everything, it's simpler",
+          "footprintDelta": 0.5,
+          "explanation": "Tens of thousands of plates, cups and cutlery go straight to landfill after one use."
+        },
+        {
+          "id": "standard-bins",
+          "label": "Put out the usual rubbish bins",
+          "footprintDelta": 0.0,
+          "explanation": "The site stays tidy, but everything still ends up in landfill."
+        },
+        {
+          "id": "giveaways",
+          "label": "Hand out free plastic merchandise",
+          "footprintDelta": 0.5,
+          "explanation": "Cheap plastic giveaways are made from new oil and are mostly thrown away within weeks."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "hotel-manager",
+      "priority": "zero-waste",
+      "prompt": "You manage a large hotel. The breakfast buffet throws out bins of food every morning. What do you do?",
+      "answers": [
+        {
+          "id": "bigger-buffet",
+          "label": "Make the buffet bigger to impress guests",
+          "footprintDelta": 0.5,
+          "explanation": "A bigger spread means even more food is thrown away."
+        },
+        {
+          "id": "smart-buffet",
+          "label": "Smaller dishes, donate leftovers, compost",
+          "footprintDelta": -0.25,
+          "explanation": "Cooking to demand, donating what's left and composting scraps keeps food out of landfill."
+        },
+        {
+          "id": "wrapped",
+          "label": "Wrap everything in single-use packets",
+          "footprintDelta": 0.5,
+          "explanation": "Individual packets add a pile of packaging to the food waste."
+        },
+        {
+          "id": "as-usual",
+          "label": "Run the buffet as usual",
+          "footprintDelta": 0.0,
+          "explanation": "Nothing changes: the same bins of food go to landfill each day."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "city-planner-heat",
+      "priority": "resilient-cities",
+      "prompt": "You're a city planner. Heatwaves are getting hotter and the city centre bakes in summer. What do you plan?",
+      "answers": [
+        {
+          "id": "car-parks",
+          "label": "Turn small parks into car parks",
+          "footprintDelta": 0.5,
+          "explanation": "Asphalt soaks up heat, and losing green space makes the centre even hotter and floods it faster."
+        },
+        {
+          "id": "same-plan",
+          "label": "Keep the current plan",
+          "footprintDelta": 0.0,
+          "explanation": "The city stays as it is: just as hot next summer."
+        },
+        {
+          "id": "cool-city",
+          "label": "Street trees, shade and cool roofs",
+          "footprintDelta": -0.25,
+          "explanation": "Trees and light-coloured roofs cool streets and buildings, so less energy is spent on air conditioning."
+        },
+        {
+          "id": "glass-towers",
+          "label": "Approve unshaded glass towers",
+          "footprintDelta": 0.5,
+          "explanation": "Unshaded glass buildings trap heat and need huge amounts of cooling."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "flats-manager",
+      "priority": "resilient-cities",
+      "prompt": "You manage a block of council flats in a street that floods. The budget allows one project. What is it?",
+      "answers": [
+        {
+          "id": "flood-ready",
+          "label": "Raise power points and insulate",
+          "footprintDelta": -0.25,
+          "explanation": "Raised wiring and fittings recover quickly after a flood, and insulation cuts heating energy all year."
+        },
+        {
+          "id": "basement-rooms",
+          "label": "Add bedrooms in the basement",
+          "footprintDelta": 0.5,
+          "explanation": "Basement bedrooms are the first rooms to flood, putting tenants in danger."
+        },
+        {
+          "id": "wait",
+          "label": "Wait and fix things after the next flood",
+          "footprintDelta": 0.0,
+          "explanation": "Nothing changes until the water comes, and then repairs cost more."
+        },
+        {
+          "id": "concrete",
+          "label": "Replace the lawns with concrete",
+          "footprintDelta": 0.5,
+          "explanation": "Concrete sends rain straight into the drains, so the street floods sooner."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "stormwater-policy",
+      "priority": "resilient-cities",
+      "prompt": "You're a policy maker setting the stormwater budget for a growing city. What's the priority?",
+      "answers": [
+        {
+          "id": "maintain",
+          "label": "Maintain the existing pipes",
+          "footprintDelta": 0.0,
+          "explanation": "The system keeps working, but it isn't ready for heavier rain."
+        },
+        {
+          "id": "pipe-streams",
+          "label": "Pipe the streams underground and build on top",
+          "footprintDelta": 0.5,
+          "explanation": "Piped streams overflow in big storms, and the land on top floods."
+        },
+        {
+          "id": "cut-maintenance",
+          "label": "Cut drain maintenance to save money",
+          "footprintDelta": 0.5,
+          "explanation": "Blocked drains overflow in the first heavy rain."
+        },
+        {
+          "id": "sponge-city",
+          "label": "Restore streams and wetlands, add rain gardens",
+          "footprintDelta": -0.25,
+          "explanation": "Wetlands and rain gardens soak up stormwater and slow floods, and they store carbon too."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "fashion-ceo",
+      "priority": "green-industry",
+      "prompt": "You're the CEO of a clothing brand. Sales are slowing. What's your next move?",
+      "answers": [
+        {
+          "id": "weekly-ranges",
+          "label": "Release a new range every week",
+          "footprintDelta": 0.5,
+          "explanation": "Fast fashion means more clothes made, worn briefly and thrown away."
+        },
+        {
+          "id": "burn-stock",
+          "label": "Destroy unsold stock to protect the brand",
+          "footprintDelta": 0.5,
+          "explanation": "Burning new clothes wastes every bit of energy and material that went into making them."
+        },
+        {
+          "id": "circular",
+          "label": "Recycled fabrics, repairs and take-backs",
+          "footprintDelta": -0.25,
+          "explanation": "Recycled fibres and repair services keep clothes in use and cut the need for new materials."
+        },
+        {
+          "id": "same-range",
+          "label": "Keep the current range",
+          "footprintDelta": 0.0,
+          "explanation": "Nothing changes: the brand keeps relying on new materials."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "electronics-retailer",
+      "priority": "green-industry",
+      "prompt": "You run an electronics store chain. Customers keep asking what to do with their old phones and laptops. What's your answer?",
+      "answers": [
+        {
+          "id": "take-back",
+          "label": "Take back and refurbish old devices",
+          "footprintDelta": -0.25,
+          "explanation": "Refurbished devices and recovered metals mean fewer new ones have to be made."
+        },
+        {
+          "id": "council-day",
+          "label": "Point them to the council e-waste day",
+          "footprintDelta": 0.0,
+          "explanation": "Some devices get recycled, but most stay in drawers."
+        },
+        {
+          "id": "trade-in-bin",
+          "label": "Trade-in deals, then bin the old devices",
+          "footprintDelta": 0.5,
+          "explanation": "Throwing away working devices wastes their metals and the energy used to make them."
+        },
+        {
+          "id": "landfill-returns",
+          "label": "Send returned items to landfill",
+          "footprintDelta": 0.5,
+          "explanation": "Returned devices often work fine. Burying them wastes valuable materials."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "furniture-maker",
+      "priority": "green-industry",
+      "prompt": "You own a furniture factory. A new range is being designed. What's it made from?",
+      "answers": [
+        {
+          "id": "particle-board",
+          "label": "Cheap particle board that can't be repaired",
+          "footprintDelta": 0.5,
+          "explanation": "Furniture that can't be repaired is thrown out sooner and replaced with new."
+        },
+        {
+          "id": "reclaimed",
+          "label": "Reclaimed timber, built to be repaired",
+          "footprintDelta": -0.25,
+          "explanation": "Reclaimed timber needs no new trees, and repairable furniture lasts for decades."
+        },
+        {
+          "id": "imported-hardwood",
+          "label": "New imported tropical hardwood",
+          "footprintDelta": 0.5,
+          "explanation": "Logging tropical forests releases stored carbon, and shipping timber burns fuel."
+        },
+        {
+          "id": "same-materials",
+          "label": "The same materials as last time",
+          "footprintDelta": 0.0,
+          "explanation": "Nothing changes: the factory keeps relying on new raw materials."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "orchard-owner",
+      "priority": "awareness",
+      "prompt": "You own an orchard. Droughts and sudden downpours are getting more common. What do you do?",
+      "answers": [
+        {
+          "id": "adapt",
+          "label": "Climate-suited trees and water storage",
+          "footprintDelta": -0.25,
+          "explanation": "Hardier varieties and stored water help the orchard cope with drought, and sharing results helps neighbours too."
+        },
+        {
+          "id": "riverbank",
+          "label": "Plant right up to the riverbank",
+          "footprintDelta": 0.5,
+          "explanation": "Clearing riverbank plants lets soil wash away in downpours and leaves the trees exposed to floods."
+        },
+        {
+          "id": "same-crops",
+          "label": "Keep growing the same varieties",
+          "footprintDelta": 0.0,
+          "explanation": "The orchard carries on, but it isn't any better prepared for the next drought."
+        },
+        {
+          "id": "pump-more",
+          "label": "Pump more groundwater with diesel pumps",
+          "footprintDelta": 0.5,
+          "explanation": "Diesel pumps add emissions, and over-pumping drains the water everyone relies on."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "news-editor",
+      "priority": "awareness",
+      "prompt": "You're the editor of a regional news site. How do you cover climate this year?",
+      "answers": [
+        {
+          "id": "disasters-only",
+          "label": "Cover climate only when disaster strikes",
+          "footprintDelta": 0.0,
+          "explanation": "Readers hear about climate, but only when it's too late to prepare."
+        },
+        {
+          "id": "regular",
+          "label": "Regular local climate and hazard stories",
+          "footprintDelta": -0.25,
+          "explanation": "Clear, regular local reporting helps people understand their risks and what they can do."
+        },
+        {
+          "id": "cut-science",
+          "label": "Cut the science reporter to save money",
+          "footprintDelta": 0.5,
+          "explanation": "Fewer people understand what's changing and how to prepare."
+        },
+        {
+          "id": "clickbait",
+          "label": "Run stories doubting climate science for clicks",
+          "footprintDelta": 0.5,
+          "explanation": "Misleading stories delay action and leave people less prepared."
+        }
+      ],
+      "source": "placeholder"
+    },
+    {
+      "id": "dairy-farmer",
+      "priority": "awareness",
+      "prompt": "You run a dairy farm. Milk prices are up and the bank will lend you more. What do you do?",
+      "answers": [
+        {
+          "id": "more-cows",
+          "label": "Add more cows on the same land",
+          "footprintDelta": 0.5,
+          "explanation": "More cows mean more methane, and more pressure on the soil and waterways."
+        },
+        {
+          "id": "drain-wetland",
+          "label": "Drain the wetland for more pasture",
+          "footprintDelta": 0.5,
+          "explanation": "Drained wetlands release stored carbon and can no longer soak up floodwater."
+        },
+        {
+          "id": "advisor",
+          "label": "Work with an advisor on lower-emission farming",
+          "footprintDelta": -0.25,
+          "explanation": "Better feed, fenced waterways and planting cut emissions and help the farm cope with dry spells and floods."
+        },
+        {
+          "id": "same-herd",
+          "label": "Keep the same herd and practices",
+          "footprintDelta": 0.0,
+          "explanation": "Nothing changes: the farm's emissions and risks stay the same."
         }
       ],
       "source": "placeholder"

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { GameData } from '../data/schemas';
 import type { GameState } from './state';
 import { yearlyIncome } from './economy';
-import { answer, data, dataWith, FLOOD_HOUSE, FLOOD_PRICE, LANDSLIDE_HOUSE, nextYear, startedGame, withHouse } from './testHelpers';
+import { answer, data, YEAR1_CORRECT, YEAR1_QUESTION, dataWith, FLOOD_HOUSE, FLOOD_PRICE, LANDSLIDE_HOUSE, nextYear, startedGame, withHouse } from './testHelpers';
 import {
   answerQuiz,
   applyMod,
@@ -57,14 +57,13 @@ describe('buying and year start', () => {
     expect(next.actionsLeft).toBe(data.balance.actionsPerTurn);
   });
 
-  it('income is incomePercentOfHouseValue of the current house value, so damage lowers it', () => {
-    const hit = playYear(startedGame(FLOOD_HOUSE, alwaysHits), alwaysHits);
-    const house = hit.house!;
-    expect(house.value).toBeLessThan(house.fullValue);
-    const next = nextYear(hit, alwaysHits);
-    const income = Math.round((house.value * data.balance.incomePercentOfHouseValue) / 100);
-    expect(next.bank).toBe(hit.bank + income);
-    expect(income).toBeLessThan(Math.round((house.fullValue * data.balance.incomePercentOfHouseValue) / 100));
+  it("income is incomePercentOfHouseValue of the house's original value, whatever damage or upgrades it has", () => {
+    const income = Math.round((FLOOD_PRICE * data.balance.incomePercentOfHouseValue) / 100);
+    // Upgraded and then damaged: value differs from the purchase price both ways.
+    const upgraded = expectOk(applyMod(startedGame(FLOOD_HOUSE, alwaysHits), alwaysHits, 'seal-doors'));
+    const hit = playYear(upgraded, alwaysHits);
+    expect(hit.house!.value).not.toBe(FLOOD_PRICE);
+    expect(nextYear(hit, alwaysHits).bank).toBe(hit.bank + income);
   });
 
   it('cannot buy a house the bank cannot cover', () => {
@@ -87,18 +86,19 @@ describe("the year's question", () => {
   });
 
   it('the answer changes the footprint only when the year ends', () => {
-    const answered = startedGame(FLOOD_HOUSE, neverHits, 1, 0); // cycle: -1.0
+    const answered = startedGame(FLOOD_HOUSE, neverHits, 1, YEAR1_CORRECT);
+    const correctId = YEAR1_QUESTION.answers[YEAR1_CORRECT]!.id;
     expect(answered.footprint).toBe(data.balance.startingFootprint);
-    expect(answered.thisYear.quiz?.answerId).toBe('cycle');
+    expect(answered.thisYear.quiz?.answerId).toBe(correctId);
     const ended = playYear(answered, neverHits);
-    expect(ended.history[0]!.quiz.answerId).toBe('cycle');
+    expect(ended.history[0]!.quiz.answerId).toBe(correctId);
     expect(ended.footprint).toBeCloseTo(
       expectedFootprint(data, data.balance.startingFootprint, data.balance.quizAnswers.correct.footprintDelta),
     );
   });
 
   it('can only be answered once a year', () => {
-    expect(answerQuiz(startedGame(), data, 'cycle').ok).toBe(false);
+    expect(answerQuiz(startedGame(), data, YEAR1_QUESTION.answers[0]!.id).ok).toBe(false);
   });
 
   it('the next year opens with its question again', () => {
@@ -321,7 +321,7 @@ describe('footprint', () => {
   const { correct, neutral, wrong } = data.balance.quizAnswers;
 
   it('adds the base increment and the quiz delta', () => {
-    const s = playYear(startedGame(FLOOD_HOUSE, neverHits), neverHits); // answered cycle: correct
+    const s = playYear(startedGame(FLOOD_HOUSE, neverHits, 1, YEAR1_CORRECT), neverHits);
     expect(s.footprint).toBeCloseTo(expectedFootprint(data, data.balance.startingFootprint, correct.footprintDelta));
   });
 
@@ -330,7 +330,7 @@ describe('footprint', () => {
       d.balance.startingFootprint = 10;
       d.balance.baseYearlyIncreasePercent = 10;
     });
-    const wrongIndex = data.quiz[0]!.answers.findIndex((a) => a.footprintDelta === wrong.footprintDelta);
+    const wrongIndex = YEAR1_QUESTION.answers.findIndex((a) => a.footprintDelta === wrong.footprintDelta);
     const s = playYear(startedGame(FLOOD_HOUSE, high, 1, wrongIndex), high);
     expect(s.history[0]!.baseIncrement).toBeCloseTo(1);
     expect(s.footprint).toBeCloseTo(10 + 1 + wrong.footprintDelta);
@@ -348,7 +348,7 @@ describe('footprint', () => {
       d.mods.find((m) => m.id === 'plant-trees')!.footprintDelta = -0.2;
       d.balance.startingFootprint = 9; // well above the floor, so the sum isn't clamped
     });
-    const s = expectOk(applyMod(startedGame(FLOOD_HOUSE, withTrees), withTrees, 'plant-trees'));
+    const s = expectOk(applyMod(startedGame(FLOOD_HOUSE, withTrees, 1, YEAR1_CORRECT), withTrees, 'plant-trees'));
     expect(playYear(s, withTrees).footprint).toBeCloseTo(
       expectedFootprint(withTrees, withTrees.balance.startingFootprint, correct.footprintDelta - 0.2),
     );
@@ -369,7 +369,7 @@ describe('footprint', () => {
       d.balance.startingFootprint = 8.25;
       d.balance.baseYearlyIncreasePercent = 4; // +0.33 t, so 8.58 t
     });
-    const neutralIndex = data.quiz[0]!.answers.findIndex((a) => a.footprintDelta === neutral.footprintDelta);
+    const neutralIndex = YEAR1_QUESTION.answers.findIndex((a) => a.footprintDelta === neutral.footprintDelta);
     const s = playYear(startedGame(FLOOD_HOUSE, edge, 1, neutralIndex), edge);
     expect(s.footprint).toBeCloseTo(8.58);
     expect(s.history[0]!.results[0]!.chancePercent).toBe(35);

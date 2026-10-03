@@ -1,7 +1,7 @@
 import * as Phaser from 'phaser';
 import { SPOTS, type Mod, type Spot } from '../data/schemas';
 import { formatMoney } from '../sim/format';
-import { getArea, getHouse, quizForYear, type HouseState } from '../sim/state';
+import { getArea, getHouse, priorityOf, quizForYear, type HouseState } from '../sim/state';
 import { answerQuiz, applyMod, checkApplyMod, checkEndTurn, checkRepair, checkSell, endTurn, repair, sell } from '../sim/turn';
 import { apply, data, state } from '../session';
 import { Button, FocusNav, type ButtonOptions } from '../ui/buttons';
@@ -143,9 +143,10 @@ export class HouseScene extends Phaser.Scene {
 
     // Each year opens with the question, before any upgrades.
     if (s.phase === 'quiz') {
-      const question = quizForYear(d, s.year);
+      const question = quizForYear(d, s);
       showQuestion(this, {
         question,
+        priority: priorityOf(d, question),
         from: hud.footprintBox,
         nav: this.nav,
         onAnswer: (answerId) => {

@@ -1,4 +1,4 @@
-import type { Area, Disaster, GameData, House, Mod, QuizQuestion } from '../data/schemas';
+import type { Area, Disaster, GameData, House, Mod, QuizPriority, QuizQuestion } from '../data/schemas';
 
 export type Phase =
   /** Picking a house: at game start, or after selling. */
@@ -106,6 +106,8 @@ export interface GameState {
   outcome: Outcome | null;
   thisYear: YearActions;
   history: YearRecord[];
+  /** Question ids in the order they're asked, drawn from the bank when the game starts. */
+  questionOrder: string[];
 }
 
 /** Result of checking or performing a player intent. */
@@ -145,9 +147,22 @@ export function activeMods(data: GameData, house: HouseState): Mod[] {
   return [...house.permanentMods, ...house.consumables].map((id) => getMod(data, id));
 }
 
-/** Questions cycle in order, one per year. */
-export function quizForYear(data: GameData, year: number): QuizQuestion {
-  const question = data.quiz[(year - 1) % data.quiz.length];
-  if (!question) throw new Error('quiz.json has no questions');
+export function getQuestion(data: GameData, id: string): QuizQuestion {
+  const question = data.quiz.find((q) => q.id === id);
+  if (!question) throw new Error(`Unknown question "${id}"`);
   return question;
+}
+
+/** This year's question: the game's shuffled order, one per year (wrapping if the game outlasts the bank). */
+export function quizForYear(data: GameData, state: GameState): QuizQuestion {
+  const { questionOrder: order } = state;
+  if (order.length === 0) throw new Error('The game has no questions');
+  return getQuestion(data, order[(state.year - 1) % order.length]!);
+}
+
+/** The COP31 priority a question is about. */
+export function priorityOf(data: GameData, question: QuizQuestion): QuizPriority {
+  const priority = data.quizPriorities.find((p) => p.id === question.priority);
+  if (!priority) throw new Error(`Unknown quiz priority "${question.priority}"`);
+  return priority;
 }

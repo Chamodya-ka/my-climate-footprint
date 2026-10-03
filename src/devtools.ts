@@ -88,7 +88,7 @@ export function installDevtools(game: Phaser.Game): void {
     async answer(answerIndex = 0) {
       await waitFor('House');
       if (session.state().phase !== 'quiz') return;
-      const label = quizForYear(session.data(), session.state().year).answers[answerIndex]!.label;
+      const label = quizForYear(session.data(), session.state()).answers[answerIndex]!.label;
       await sleep(450); // let the question bubble grow in
       await click((l) => l === label);
       await click((l) => l === 'Continue'); // close the feedback

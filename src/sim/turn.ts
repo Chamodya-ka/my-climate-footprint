@@ -1,5 +1,6 @@
 import type { GameData } from '../data/schemas';
 import { damageIfHit, valueLostFor } from './damage';
+import { drawQuestionOrder } from './quiz';
 import { cheapestOtherHouse, repairCost, yearlyIncome } from './economy';
 import { formatMoney } from './format';
 import { nextFootprint } from './footprint';
@@ -35,9 +36,11 @@ function ok(state: GameState): Result {
 }
 
 export function newGame(data: GameData, seed: number): GameState {
+  const { order, rng } = drawQuestionOrder(data, seedToState(seed));
   return {
     seed,
-    rng: seedToState(seed),
+    rng,
+    questionOrder: order,
     phase: 'choosingHouse',
     year: 0,
     bank: data.balance.startingBudget,
@@ -212,7 +215,7 @@ export function sell(state: GameState, data: GameData): Result {
 
 export function checkAnswerQuiz(state: GameState, data: GameData, answerId: string): Check {
   if (state.phase !== 'quiz') return fail('There is no question to answer right now.');
-  const question = quizForYear(data, state.year);
+  const question = quizForYear(data, state);
   if (!question.answers.some((a) => a.id === answerId)) return fail(`Unknown answer "${answerId}".`);
   return OK;
 }
@@ -225,7 +228,7 @@ export function answerQuiz(state: GameState, data: GameData, answerId: string): 
   const check = checkAnswerQuiz(state, data, answerId);
   if (!check.ok) return check;
   const s = clone(state);
-  const question = quizForYear(data, s.year);
+  const question = quizForYear(data, s);
   const answer = question.answers.find((a) => a.id === answerId)!;
   s.thisYear.quiz = { questionId: question.id, answerId, footprintDelta: answer.footprintDelta };
   s.phase = 'action';
