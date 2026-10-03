@@ -4,25 +4,24 @@ import { getHouse, type GameState, type YearRecord } from '../sim/state';
 import { data, state } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
-import { DISASTER_NAME } from '../ui/copy';
-import { dieKey } from '../ui/dice';
+import { drawCalendar, CALENDAR_H, CALENDAR_W } from '../ui/calendar';
+import { calendarYear, yearVerdict } from '../ui/copy';
 import { drawHUD } from '../ui/HUD';
 import { drawHouseScene, FULL_SCREEN_ART, groundY, slopeTop, type ArtBox } from '../ui/houseArt';
 import { panel } from '../ui/panels';
 import { colours, HEIGHT, text, WIDTH } from '../ui/theme';
 
-const DICE_SPIN_MS = 1400;
-/** How often the tumbling die shows a new face. */
-const DIE_FACE_MS = 90;
 const EFFECT_MS = 2200;
 const EDGE = 16;
 const PANEL_H = 170;
 const INFO_W = 340;
-const DIE_W = 280;
+const GAP = 24;
+const BUTTON_W = 300;
+const INCOME_ICON_SCALE = 1.4;
 
-/** The weather roll. The outcome is already decided by the sim; the dice are cosmetic. */
+/** The weather roll. The outcome is already decided by the sim; the flipping calendar is cosmetic. */
 export class Roll extends Phaser.Scene {
-  /** State before the roll, so the HUD and house don't spoil the outcome while the dice spin. */
+  /** State before the roll, so the HUD and house don't spoil the outcome while the calendar flips. */
   private before: GameState | null = null;
   /** Particles die when they leave the picture, so effects stay inside the frame. */
   private frame: Phaser.Types.GameObjects.Particles.DeathZoneObject | null = null;
@@ -46,7 +45,7 @@ export class Roll extends Phaser.Scene {
     let art = drawHouseScene(this, d, getHouse(d, rec.houseId), shown.house, box).setDepth(-1);
     this.frame = { type: 'onLeave', source: new Phaser.Geom.Rectangle(box.x, box.y, box.w, box.h) };
 
-    // Bottom panel: the year's odds, one die per disaster, then the continue button.
+    // Bottom panel: income, the flipping calendar and what happened, then the continue button.
     const py = HEIGHT - PANEL_H - EDGE;
     const ui = this.add.container(0, 0).setDepth(5);
     ui.add(panel(this, EDGE, py, WIDTH - EDGE * 2, PANEL_H).setFillStyle(colours.panel, 1));
@@ -54,67 +53,59 @@ export class Roll extends Phaser.Scene {
     ui.add(heading);
     // Income arrives at the start of next year, so there's none after the last year or a lost house.
     if (!s.outcome) {
+      // The bank icon with the year's income, e.g. "+$50,000".
       const income = d.balance.yearlyIncome;
-      ui.add(
-        this.add.text(
-          EDGE + 16,
-          heading.y + heading.height + 8,
-          `You earn ${formatMoney(income)}, and your bank balance goes up to ${formatMoney(s.bank + income)}.`,
-          { ...text.body, fontSize: '18px', wordWrap: { width: INFO_W } },
-        ),
-      );
+      const rowY = heading.y + heading.height + 34;
+      const icon = this.add.image(EDGE + 16, rowY, 'icon-bank').setOrigin(0, 0.5).setScale(INCOME_ICON_SCALE);
+      const amount = this.add
+        .text(icon.x + icon.displayWidth + 12, rowY, `+${formatMoney(income)}`, {
+          ...text.h2,
+          fontSize: '28px',
+          color: colours.good,
+        })
+        .setOrigin(0, 0.5);
+      ui.add([icon, amount]);
+      announce(`One year goes by. Bank +${formatMoney(income)}.`);
     }
 
     const anyHit = rec.results.some((r) => r.hit);
     this.rain(box, anyHit ? 400 : 60);
 
-    // One tumbling die per disaster roll. Purely cosmetic: no numbers or odds are shown.
-    // The sim has already decided the outcome; the die just lands on a random face.
-    let x = EDGE + 16 + INFO_W + 24;
-    let delay = 0;
-    for (const r of rec.results) {
-      const die = this.add.image(x + DIE_W / 2, py + PANEL_H / 2 - 6, dieKey(1));
-      const outcome = this.add
-        .text(x + DIE_W / 2, py + PANEL_H - 22, '', { ...text.body, fontStyle: 'bold' })
-        .setOrigin(0.5);
-      ui.add([die, outcome]);
-      const tumble = this.time.addEvent({
-        delay: DIE_FACE_MS,
-        loop: true,
-        callback: () => die.setTexture(dieKey(Phaser.Math.Between(1, 6))).setAngle(Phaser.Math.Between(-30, 30)),
-      });
-      this.tweens.add({ targets: die, y: die.y - 14, duration: DICE_SPIN_MS / 6, yoyo: true, repeat: 2, ease: 'Sine.easeOut' });
-      this.time.delayedCall(delay + DICE_SPIN_MS, () => {
-        tumble.remove();
-        die.setTexture(dieKey(Phaser.Math.Between(1, 6)));
-        this.tweens.add({ targets: die, angle: 0, duration: 150 });
-        const name = DISASTER_NAME[r.disaster].toLowerCase();
-        // Words and ✓/! marks, not just colour.
-        const verdict = r.hit ? `! A ${name} hits.` : `✓ No ${name} this year.`;
-        outcome.setText(verdict).setColor(r.hit ? colours.bad : colours.good);
-        announce(verdict);
-        if (r.hit) this.disasterEffect(r.disaster, box);
-      });
-      x += DIE_W + 24;
-      delay += DICE_SPIN_MS;
-    }
+    // A calendar flips through the year: time passing, with no numbers or odds.
+    // The sim has already decided the outcome.
+    const calX = EDGE + 16 + INFO_W + GAP;
+    const calendar = drawCalendar(this, calX, py + (PANEL_H - CALENDAR_H) / 2 + 4, calendarYear(d, rec.year));
+    const verdictX = calX + CALENDAR_W + GAP;
+    const outcome = this.add.text(verdictX, py + PANEL_H / 2, '', {
+      ...text.body,
+      fontStyle: 'bold',
+      wordWrap: { width: WIDTH - EDGE - 16 - BUTTON_W - GAP - verdictX },
+    });
+    outcome.setOrigin(0, 0.5);
+    ui.add([calendar, outcome]);
 
-    this.time.delayedCall(delay + (anyHit ? EFFECT_MS : 300), () => {
-      // Reveal the resolved state.
-      hud.destroy();
-      hud = drawHUD(this, d, s);
-      art.destroy();
-      art = drawHouseScene(this, d, getHouse(d, rec.houseId), s.house, box).setDepth(-1);
-      const nav = new FocusNav(this);
-      const bw = 300;
-      const button = new Button(this, WIDTH - EDGE - 16 - bw, py + PANEL_H - 76, bw, 60, {
-        label: 'See the year review',
-        fontSize: 22,
-        onActivate: () => this.scene.start('YearReview'),
+    calendar.flipYear(() => {
+      // The words carry the meaning, not just the colour.
+      const verdict = yearVerdict(rec.results);
+      outcome.setText(verdict).setColor(anyHit ? colours.bad : colours.good);
+      announce(verdict);
+      for (const r of rec.results) if (r.hit) this.disasterEffect(r.disaster, box);
+      this.time.delayedCall(anyHit ? EFFECT_MS : 300, () => {
+        // Reveal the resolved state.
+        hud.destroy();
+        hud = drawHUD(this, d, s);
+        art.destroy();
+        art = drawHouseScene(this, d, getHouse(d, rec.houseId), s.house, box).setDepth(-1);
+        const nav = new FocusNav(this);
+        const button = new Button(this, WIDTH - EDGE - 16 - BUTTON_W, py + PANEL_H - 76, BUTTON_W, 60, {
+          label: 'See the year review',
+          fontSize: 22,
+          onActivate: () => this.scene.start('YearReview'),
+        });
+        ui.add(button);
+        nav.add(button);
+        nav.focusFirstAvailable();
       });
-      ui.add(button);
-      nav.add(button);
-      nav.focusFirstAvailable();
     });
   }
 

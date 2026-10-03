@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import type { GameData } from '../data/schemas';
-import { formatMoney, formatTonnes } from '../sim/format';
+import { formatMoney } from '../sim/format';
 import { repairCost } from '../sim/economy';
 import { type GameState } from '../sim/state';
 import { ICON_SIZE, type IconKey } from './icons';
@@ -63,7 +63,7 @@ function box(
 }
 
 /**
- * Top left: the neighbourhood footprint. Top centre: the year, as big text.
+ * Top left: the carbon footprint. Top centre: the year, as big text.
  * Top right: bank, house value, total repair cost.
  */
 export interface BoxRect {
@@ -76,10 +76,111 @@ export interface BoxRect {
 export interface Hud extends Phaser.GameObjects.Container {
   /** Bottom edge of the top-right box, so side panels can sit below it. */
   rightBottom: number;
-  /** The neighbourhood footprint box (top left). */
+  /** The carbon footprint box (top left). */
   footprintBox: BoxRect;
   /** Each row of the boxes, e.g. for pointing explanations at them. */
   rows: Record<HudRowKey, BoxRect>;
+  /** Pops in the arrow beside the gauge for this year's quiz answer (tonnes; not yet applied). */
+  showFootprintChange: (delta: number) => void;
+}
+
+const GAUGE_W = 200;
+const GAUGE_H = 14;
+const MARKER = 7;
+const ARROW_W = 26;
+const ARROW_GAP = 12;
+const GAUGE_LOW = 0x4caf50;
+const GAUGE_MID = 0xffd166;
+const GAUGE_HIGH = 0xe5533d;
+
+function lerpColour(a: number, b: number, t: number): number {
+  const ch = (shift: number) => Math.round(((a >> shift) & 0xff) + (((b >> shift) & 0xff) - ((a >> shift) & 0xff)) * t);
+  return (ch(16) << 16) | (ch(8) << 8) | ch(0);
+}
+
+/** Green at 0, yellow halfway, red at the top of the scale. */
+function gaugeColour(t: number): number {
+  return t < 0.5 ? lerpColour(GAUGE_LOW, GAUGE_MID, t * 2) : lerpColour(GAUGE_MID, GAUGE_HIGH, (t - 0.5) * 2);
+}
+
+/**
+ * Up (red) when the answer raises the footprint, down (green) when it lowers it,
+ * a flat bar (grey) when it doesn't change it. Shape carries the meaning, not just colour.
+ */
+function drawChangeArrow(g: Phaser.GameObjects.Graphics, delta: number): void {
+  const half = ARROW_W / 2;
+  g.clear();
+  if (delta === 0) {
+    g.fillStyle(Phaser.Display.Color.HexStringToColor(colours.textDim).color);
+    g.fillRect(-half + 3, -6, ARROW_W - 6, 4).fillRect(-half + 3, 3, ARROW_W - 6, 4);
+    return;
+  }
+  const dir = delta > 0 ? -1 : 1; // -1 points up
+  g.fillStyle(delta > 0 ? GAUGE_HIGH : GAUGE_LOW).lineStyle(2, colours.bg);
+  const points = [
+    { x: -5, y: -dir * 13 },
+    { x: 5, y: -dir * 13 },
+    { x: 5, y: 0 },
+    { x: half, y: 0 },
+    { x: 0, y: dir * 13 },
+    { x: -half, y: 0 },
+    { x: -5, y: 0 },
+  ].map((p) => new Phaser.Math.Vector2(p.x, p.y));
+  g.fillPoints(points, true).strokePoints(points, true);
+}
+
+/**
+ * The carbon footprint as a 0–max scale, green to red, with ticks at the
+ * weather band edges and a marker at the current value. Beside it, room for an
+ * arrow showing which way this year's answer moves the footprint.
+ */
+function footprintGauge(
+  scene: Phaser.Scene,
+  c: Phaser.GameObjects.Container,
+  data: GameData,
+  footprint: number,
+  rowRects: Partial<Record<HudRowKey, BoxRect>>,
+): { rect: BoxRect; arrow: Phaser.GameObjects.Graphics } {
+  const bands = data.weather.bands;
+  const max = bands[bands.length - 1]!.max;
+  const x = EDGE;
+  const textX = x + PAD + ICON_SIZE + ICON_GAP;
+  const label = scene.add.text(textX, EDGE + PAD - 2, 'CARBON FOOTPRINT', {
+    fontFamily: FONT,
+    fontSize: '13px',
+    color: colours.textDim,
+  });
+  const barY = label.y + label.height + MARKER + 3;
+  const w = Math.max(MIN_W, textX - x + Math.max(label.width, GAUGE_W + ARROW_GAP + ARROW_W) + PAD);
+  const h = barY + GAUGE_H - EDGE + PAD;
+
+  const bg = scene.add.rectangle(x, EDGE, w, h, colours.panel, 0.92).setOrigin(0).setStrokeStyle(2, colours.panelEdge);
+  const g = scene.add.graphics();
+  const SLICE = 2;
+  for (let i = 0; i < GAUGE_W; i += SLICE) {
+    g.fillStyle(gaugeColour(i / GAUGE_W)).fillRect(textX + i, barY, SLICE, GAUGE_H);
+  }
+  g.lineStyle(2, colours.bg, 0.6);
+  for (const band of bands.slice(1)) {
+    const tx = textX + (band.min / max) * GAUGE_W;
+    g.lineBetween(tx, barY + 3, tx, barY + GAUGE_H - 3);
+  }
+  g.lineStyle(1, colours.panelEdge).strokeRect(textX, barY, GAUGE_W, GAUGE_H);
+
+  // The marker: a pointer above the bar and a line through it.
+  const mx = textX + (Phaser.Math.Clamp(footprint, 0, max) / max) * GAUGE_W;
+  g.fillStyle(0xffffff).lineStyle(2, colours.bg);
+  g.fillTriangle(mx - MARKER, barY - MARKER - 1, mx + MARKER, barY - MARKER - 1, mx, barY + 1);
+  g.strokeTriangle(mx - MARKER, barY - MARKER - 1, mx + MARKER, barY - MARKER - 1, mx, barY + 1);
+  g.lineStyle(4, colours.bg).lineBetween(mx, barY, mx, barY + GAUGE_H);
+  g.lineStyle(2, 0xffffff).lineBetween(mx, barY, mx, barY + GAUGE_H);
+
+  const icon = scene.add.image(x + PAD, EDGE + h / 2, 'icon-footprint').setOrigin(0, 0.5);
+  const arrow = scene.add.graphics({ x: textX + GAUGE_W + ARROW_GAP + ARROW_W / 2, y: barY + GAUGE_H / 2 }).setVisible(false);
+  c.add([bg, icon, label, g, arrow]);
+
+  rowRects.footprint = { x: x + PAD / 2, y: EDGE + PAD / 2, w: w - PAD, h: h - PAD };
+  return { rect: { x, y: EDGE, w, h }, arrow };
 }
 
 export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState): Hud {
@@ -87,13 +188,18 @@ export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState): 
   const house = state.house;
 
   const rows: Partial<Record<HudRowKey, BoxRect>> = {};
-  const footprintBox = box(
-    scene,
-    c,
-    'left',
-    [{ key: 'footprint', icon: 'icon-footprint', label: 'Neighbourhood footprint', value: formatTonnes(state.footprint) }],
-    rows,
-  );
+  const gauge = footprintGauge(scene, c, data, state.footprint, rows);
+  const footprintBox = gauge.rect;
+  const showFootprintChange = (delta: number, animate = true) => {
+    drawChangeArrow(gauge.arrow, delta);
+    gauge.arrow.setVisible(true);
+    if (animate) {
+      gauge.arrow.setScale(0);
+      scene.tweens.add({ targets: gauge.arrow, scale: 1, duration: 350, ease: 'Back.easeOut' });
+    }
+  };
+  // Answered but not yet applied: the footprint moves when the year ends.
+  if (state.phase === 'action' && state.thisYear.quiz) showFootprintChange(state.thisYear.quiz.footprintDelta, false);
 
   // The calendar year: big white text at the top centre, outlined so it reads over the sky.
   // Hidden before the first house is bought (year 0).
@@ -122,5 +228,10 @@ export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState): 
     },
   ];
   const r = box(scene, c, 'right', right, rows);
-  return Object.assign(c, { rightBottom: r.y + r.h, footprintBox, rows: rows as Record<HudRowKey, BoxRect> });
+  return Object.assign(c, {
+    rightBottom: r.y + r.h,
+    footprintBox,
+    rows: rows as Record<HudRowKey, BoxRect>,
+    showFootprintChange: (delta: number) => showFootprintChange(delta),
+  });
 }

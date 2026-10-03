@@ -1,7 +1,7 @@
 /**
  * Player-facing text built from sim state. Pure functions (no Phaser) so the
  * framing rules can be checked in one place:
- * - talk about the neighbourhood's footprint, never one household causing a disaster;
+ * - talk about the carbon footprint as if everyone made the player's choices, never one household causing a disaster;
  * - every review covers cause → effect → what helped or would have helped;
  * - placeholder numbers are "game values", never real-world data.
  */
@@ -10,7 +10,16 @@ import { bestMissingMod, modsThatDontFit } from '../sim/advice';
 import { damageIfHit, hitsLeft, reductionFrom } from '../sim/damage';
 import { repairCost } from '../sim/economy';
 import { formatMoney, formatTonnes } from '../sim/format';
-import { getArea, getHouse, getMod, quizForYear, type GameState, type HouseState, type YearRecord } from '../sim/state';
+import {
+  getArea,
+  getHouse,
+  getMod,
+  quizForYear,
+  type DisasterResult,
+  type GameState,
+  type HouseState,
+  type YearRecord,
+} from '../sim/state';
 
 /** The calendar year shown for game year `year` (1-based), e.g. 2026. */
 export function calendarYear(data: GameData, year: number): number {
@@ -24,6 +33,14 @@ export function lastCalendarYear(data: GameData): number {
 
 export const DISASTER_NAME: Record<Disaster, string> = { flood: 'Flood', landslide: 'Landslide' };
 const lower = (d: Disaster) => DISASTER_NAME[d].toLowerCase();
+
+/** The line shown once the year has passed: each disaster that hit, or that none did. */
+export function yearVerdict(results: DisasterResult[]): string {
+  const hits = results.filter((r) => r.hit);
+  if (hits.length === 0) return 'You were lucky: there were no climate disasters this year.';
+  const names = listJoin(hits.map((r) => `a ${lower(r.disaster)}`));
+  return `Unfortunately, ${names} ${hits.length > 1 ? 'hit' : 'hits'} your home.`;
+}
 const plural = (d: Disaster) => `${lower(d)}s`;
 
 export function listJoin(items: string[]): string {
@@ -66,7 +83,7 @@ function footprintCause(data: GameData, rec: YearRecord): string {
   parts.push(`the "${answer?.label ?? rec.quiz.answerId}" choice ${signedTonnes(rec.quiz.footprintDelta)}`);
   if (rec.modFootprintDelta !== 0) parts.push(`mods ${signedTonnes(rec.modFootprintDelta)}`);
   return (
-    `If your neighbourhood made choices like yours, its footprint went from ${formatTonnes(rec.footprintBefore)} ` +
+    `Assuming everyone made the same choices you did, the carbon footprint went from ${formatTonnes(rec.footprintBefore)} ` +
     `to ${formatTonnes(rec.footprintAfter)} (${parts.join(', ')}).`
   );
 }
@@ -175,7 +192,7 @@ export interface QuizFeedback {
   /** True when the answer has the lowest footprint change of the options (ties count). */
   correct: boolean;
   verdict: string;
-  /** What the choice does to the neighbourhood footprint, in the "if your neighbourhood…" framing. */
+  /** What the choice does to the carbon footprint, in the "assuming everyone makes the same choice" framing. */
   footprintLine: string;
   /** The lowest-footprint answers. */
   best: QuizQuestion['answers'];
@@ -187,22 +204,15 @@ export function quizFeedback(question: QuizQuestion, answerId: string): QuizFeed
   const lowest = Math.min(...question.answers.map((a) => a.footprintDelta));
   const best = question.answers.filter((a) => a.footprintDelta === lowest);
   const correct = chosen.footprintDelta === lowest;
-  const amount = formatTonnes(Math.abs(chosen.footprintDelta));
-  const change =
-    chosen.footprintDelta < 0
-      ? `go down by ${amount}`
-      : chosen.footprintDelta > 0
-        ? `go up by ${amount}`
-        : 'stay the same';
+  // No tonne figures here: the HUD arrow and gauge show the change.
+  const change = chosen.footprintDelta < 0 ? 'go down' : chosen.footprintDelta > 0 ? 'go up' : 'stay the same';
   return {
     correct,
     best,
     verdict: correct
-      ? '✓ Good choice: the lowest-footprint option here.'
-      : `✗ Not the best choice: ${listJoin(best.map((a) => `"${a.label}"`))} would keep the footprint lowest.`,
-    footprintLine:
-      `If your neighbourhood made this choice, its footprint would ${change} this year ` +
-      `(game value). It's added when the year ends, and a bigger footprint makes floods and landslides more likely.`,
+      ? '✓ Good choice: the lowest-footprint option.'
+      : `✗ Not the best choice: ${listJoin(best.map((a) => `"${a.label}"`))} would be lower.`,
+    footprintLine: `Assuming everyone makes the same choice you do, the carbon footprint would ${change}.`,
   };
 }
 
@@ -218,10 +228,10 @@ export function hudIntro(data: GameData): HudIntroStep[] {
   return [
     {
       key: 'footprint',
-      title: 'Neighbourhood footprint',
+      title: 'Carbon footprint',
       body:
-        'The carbon your whole neighbourhood adds each year, in tonnes. Everyday choices push it up or down, ' +
-        'and a bigger footprint makes floods and landslides more likely.',
+        'The carbon added each year, in tonnes, assuming everyone makes the same choices you do. ' +
+        'Everyday choices push it up or down, and a bigger footprint makes floods and landslides more likely.',
     },
     {
       key: 'bank',

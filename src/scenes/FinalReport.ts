@@ -79,7 +79,7 @@ export class FinalReport extends Phaser.Scene {
     textBlock(this, leftX + 16, top + 14 + title.height + 14, colW - 32, lines.join('\n'), { ...text.body, fontSize: '17px', lineSpacing: 4 });
 
     // Footprint trend: a simple line chart plus the choices that drove it.
-    this.add.text(rightX + 16, top + 14, 'Neighbourhood footprint', text.h2);
+    this.add.text(rightX + 16, top + 14, 'Carbon footprint', text.h2);
     const chart = { x: rightX + 60, y: top + 60, w: colW - 90, h: 170 };
     const points = [{ year: 0, t: s.history[0]?.footprintBefore ?? s.footprint }, ...s.history.map((h) => ({ year: h.year, t: h.footprintAfter }))];
     const maxBand = d.weather.bands[d.weather.bands.length - 1]!.max;

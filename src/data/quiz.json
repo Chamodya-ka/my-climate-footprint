@@ -57,7 +57,7 @@
           "id": "same",
           "label": "Keep things as they are",
           "footprintDelta": 0.0,
-          "explanation": "Nothing changes, so neither does your share of the neighbourhood footprint."
+          "explanation": "Nothing changes, so neither does the carbon footprint."
         },
         {
           "id": "gas-heater",

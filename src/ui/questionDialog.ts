@@ -2,7 +2,7 @@ import * as Phaser from 'phaser';
 import type { QuizQuestion } from '../data/schemas';
 import { announce } from './a11y';
 import { Button, FocusNav } from './buttons';
-import { quizFeedback, signedTonnes } from './copy';
+import { quizFeedback } from './copy';
 import type { BoxRect } from './HUD';
 import { colours, FONT, HEIGHT, text, WIDTH } from './theme';
 
@@ -26,10 +26,8 @@ const BUBBLE_DEPTH = 21;
 const RADIUS = 14;
 
 export interface QuestionDialogOptions {
-  /** The calendar year, e.g. 2026. */
-  year: number;
   question: QuizQuestion;
-  /** The HUD's neighbourhood footprint box: the bubble grows out of it. */
+  /** The HUD's carbon footprint box: the bubble grows out of it. */
   from: BoxRect;
   /** Main nav to pause until the question is answered. */
   nav: FocusNav;
@@ -41,10 +39,10 @@ export interface QuestionDialogOptions {
 
 /**
  * The year's "What would you do?" question, as a speech bubble that grows out
- * of the neighbourhood footprint box. It can't be dismissed. The question
- * itself says nothing about footprints; once answered, the same bubble explains
- * every option, whether the choice was the best one, and how it changes the
- * neighbourhood footprint. Continue closes it.
+ * of the carbon footprint box. It can't be dismissed. The question
+ * itself says nothing about footprints; once answered, the same bubble says
+ * whether the choice was the best one, which way it moves the carbon footprint
+ * (no figures), and explains the chosen option only. Continue closes it.
  */
 export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): void {
   opts.nav.enabled = false;
@@ -80,7 +78,7 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
     bg.fillStyle(colours.panel).fillTriangle(-12, top + 2, 12, top + 2, 0, 0);
     bg.lineStyle(3, colours.focus).lineBetween(-12, top, 0, 0).lineBetween(0, 0, 12, top);
   };
-  const title = scene.add.text(x0, top + PAD, `${opts.year}: what would you do?`, text.h2);
+  const title = scene.add.text(x0, top + PAD, 'What would you do?', text.h2);
   const prompt = scene.add.text(x0, title.y + title.height + 6, question.prompt, {
     fontFamily: FONT,
     fontSize: '19px',
@@ -143,31 +141,27 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
       }),
       PAD - 4,
     );
-    for (const answer of question.answers) {
-      const chosen = answer.id === answerId;
-      const isBest = fb.best.includes(answer);
-      // Marks are text (▶ your choice, ✓ best), so colour is never the only signal.
-      const head = `${chosen ? '▶ ' : ''}${answer.label}  ${signedTonnes(answer.footprintDelta)}${isBest ? '  ✓ best' : ''}${chosen ? '  (your choice)' : ''}`;
-      add(
-        scene.add.text(0, 0, head, {
-          fontFamily: FONT,
-          fontSize: '16px',
-          color: chosen ? colours.focusText : colours.text,
-          fontStyle: 'bold',
-          wordWrap: { width: inner },
-        }),
-        2,
-      );
-      add(
-        scene.add.text(0, 0, answer.explanation, {
-          fontFamily: FONT,
-          fontSize: '15px',
-          color: colours.textDim,
-          wordWrap: { width: inner },
-        }),
-        8,
-      );
-    }
+    // Only the chosen answer is explained, to keep the bubble short.
+    const chosen = question.answers.find((a) => a.id === answerId)!;
+    add(
+      scene.add.text(0, 0, `▶ ${chosen.label}`, {
+        fontFamily: FONT,
+        fontSize: '16px',
+        color: colours.focusText,
+        fontStyle: 'bold',
+        wordWrap: { width: inner },
+      }),
+      2,
+    );
+    add(
+      scene.add.text(0, 0, chosen.explanation, {
+        fontFamily: FONT,
+        fontSize: '15px',
+        color: colours.textDim,
+        wordWrap: { width: inner },
+      }),
+      8,
+    );
     bubble.add(items);
     const cont = new Button(scene, left + W - PAD - CONTINUE_W, y + 4, CONTINUE_W, BTN_H, {
       label: 'Continue',
@@ -207,7 +201,7 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
   drawBubble(contentTop - top + rows * BTN_H + (rows - 1) * GAP + PAD);
 
   bubble.setScale(0).setAlpha(0);
-  announce(`${opts.year}. What would you do? ${question.prompt}`);
+  announce(`What would you do? ${question.prompt}`);
   scene.tweens.add({
     targets: bubble,
     scale: 1,

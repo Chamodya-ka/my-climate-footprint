@@ -5,7 +5,7 @@ import { getHouse, quizForYear, type HouseState } from '../sim/state';
 import { answerQuiz, applyMod, checkApplyMod, checkEndTurn, checkRepair, checkSell, endTurn, repair, sell } from '../sim/turn';
 import { apply, data, state } from '../session';
 import { Button, FocusNav, type ButtonOptions } from '../ui/buttons';
-import { calendarYear, modTooltip } from '../ui/copy';
+import { modTooltip } from '../ui/copy';
 import { confirmDialog } from '../ui/confirm';
 import { drawHUD } from '../ui/HUD';
 import { drawHouseScene, FULL_SCREEN_ART, spotPositions } from '../ui/houseArt';
@@ -127,12 +127,16 @@ export class HouseScene extends Phaser.Scene {
 
     // Each year opens with the question, before any upgrades.
     if (s.phase === 'quiz') {
+      const question = quizForYear(d, s.year);
       showQuestion(this, {
-        year: calendarYear(d, s.year),
-        question: quizForYear(d, s.year),
+        question,
         from: hud.footprintBox,
         nav: this.nav,
-        onAnswer: (answerId) => apply(answerQuiz(state(), d, answerId)),
+        onAnswer: (answerId) => {
+          if (!apply(answerQuiz(state(), d, answerId))) return;
+          const answer = question.answers.find((a) => a.id === answerId);
+          if (answer) hud.showFootprintChange(answer.footprintDelta);
+        },
         // Restart once the feedback is closed, so the upgrades unlock.
         onDone: () => this.scene.restart({}),
       });

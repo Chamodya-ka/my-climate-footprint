@@ -1,7 +1,6 @@
 import * as Phaser from 'phaser';
 import { loadGameData } from '../data';
 import { setData } from '../session';
-import { makeDiceTextures } from '../ui/dice';
 import { makeIconTextures } from '../ui/icons';
 import { buildHouseAssets, preloadHouseAssets } from '../ui/houseAssets';
 import { buildRegionMap, preloadMap } from '../ui/regionMap';
@@ -36,7 +35,6 @@ export class Boot extends Phaser.Scene {
     g.generateTexture('dot', 10, 10);
     g.destroy();
     makeIconTextures(this);
-    makeDiceTextures(this);
     this.scene.start('Title');
   }
 
