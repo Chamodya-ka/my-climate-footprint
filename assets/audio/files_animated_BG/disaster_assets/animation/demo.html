@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>House transitions demo</title>
+<style>
+  body { margin: 0; font-family: "Trebuchet MS", system-ui, sans-serif; background: #DDF1F8; color: #23384D; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 12px; }
+  select, button { font: inherit; padding: 8px 14px; border-radius: 999px; border: 2px solid #23384D; background: #fff; color: #23384D; cursor: pointer; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  #state { margin-left: auto; font-weight: 600; }
+  canvas { display: block; width: 100%; height: auto; border-radius: 18px; background: #BFE9F7; }
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <select id="house" aria-label="House"></select>
+    <button id="hit">Disaster hits</button>
+    <button id="repair" disabled>Repair</button>
+    <span id="state">Today</span>
+  </div>
+  <canvas id="stage" width="1600" height="1000"></canvas>
+</main>
+<script src="house-transitions.js"></script>
+<script>
+const HOUSES = [["coastal_villa", "Seaside villa", "coastal", null], ["coastal_villa_lux", "Restored double-bay villa", "coastal", null], ["riverside_bungalow", "1950s weatherboard bungalow", "riverside", null], ["riverside_bungalow_lux", "Renovated bungalow with garage", "riverside", null], ["riverside_townhouse", "New-build townhouse", "riverside", null], ["riverside_townhouse_lux", "Architect-designed townhouse", "riverside", null], ["hillysides_house", "Hillside weatherboard home", "hillysides", [[48.0, 477.0], [223.5, 510.4], [424.0, 539.7], [612.0, 598.2], [841.8, 681.7], [1050.7, 748.6], [1155.1, 761.1]]], ["hillysides_house_lux", "Glass-and-concrete hillside house", "hillysides", [[48.0, 418.5], [223.5, 439.4], [361.3, 456.1], [486.7, 502.1], [620.4, 577.3], [662.1, 623.2], [683.0, 765.3], [779.1, 786.2], [862.7, 790.4]]]];   // [id, name, region, slipPath] — copied from ../houses.json
+const LABEL = ["Today", "Damaged", "Badly damaged"];
+const load = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => fail(new Error("Missing " + src)); i.src = src; });
+const sel = document.getElementById("house");
+HOUSES.forEach(([id, name]) => sel.add(new Option(name, id)));
+let ht = null, level = 0, busy = false, kind = "flood", shared = null;
+const AMB = "../backgrounds/ambient/";
+async function loadShared() {   // drifting clouds, storm clouds, cars and the boat are shared by every house
+  if (shared) return shared;
+  const names = n => n.map(x => load(AMB + x + ".png"));
+  const [clouds, stormClouds, cars, boat] = await Promise.all([
+    Promise.all(names(["cloud_1", "cloud_2", "cloud_3"])), Promise.all(names(["storm_1", "storm_2", "storm_3"])),
+    Promise.all(names(["car_red", "car_blue", "car_yellow", "car_white"])), load(AMB + "boat.png")]);
+  return (shared = { clouds, stormClouds, cars, boat });
+}
+
+async function open(id) {
+  const [, , region, slipPath] = HOUSES.find(h => h[0] === id);
+  kind = region === "hillysides" ? "landslip" : "flood";
+  const [bgNormal, bgPost, bgNormalBase, bgPostBase, sprite, d1, d2, repairIcon] = await Promise.all([
+    load(`../backgrounds/${id}_normal.png`), load(`../backgrounds/${id}_post.png`),
+    load(`../backgrounds/${id}_normal_base.png`), load(`../backgrounds/${id}_post_base.png`), load(`../sprites/${id}.png`),
+    load(`../sprites/${id}_dmg1.png`), load(`../sprites/${id}_dmg2.png`), load("repair_icon.png")]);
+  const fgPost = region === "hillysides" ? null : await load(`../backgrounds/${id}_post_fg.png`);
+  if (ht) ht.stop();
+  ht = new HouseTransitions(document.getElementById("stage"),
+    { region, bgNormal, bgPost, bgNormalBase, bgPostBase, fgPost, sprite, damaged: { 1: d1, 2: d2 }, repairIcon, slipPath, ...(await loadShared()) },
+    { ambient: true, seed: id.length * 7 });
+  level = 0; ht.start(); ui();
+}
+function ui() {
+  document.getElementById("hit").textContent = kind === "flood" ? "Flood hits" : "Landslip hits";
+  document.getElementById("repair").disabled = busy || level === 0;
+  document.getElementById("hit").disabled = busy;
+  document.getElementById("state").textContent = LABEL[level];
+}
+document.getElementById("hit").onclick = async () => {
+  busy = true; ui();
+  level = await ht.play(kind, { from: level, to: Math.min(level + 1, 2) });
+  busy = false; ui();
+};
+document.getElementById("repair").onclick = async () => {
+  busy = true; ui();
+  level = await ht.play("repair", { from: level });
+  busy = false; ui();
+};
+sel.onchange = () => open(sel.value);
+open(sel.value).catch(e => { document.getElementById("state").textContent = e.message; });
+</script>
+</body>
+</html>

@@ -215,13 +215,18 @@ export interface HudIntroStep {
 /** The short tour of the HUD boxes, shown at the start of a new game. */
 export function hudIntro(data: GameData): HudIntroStep[] {
   const { startingBudget, yearlyIncome, actionsPerRepair } = data.balance;
+  const bands = data.weather.bands;
+  const scaleMin = bands[0]!.min;
+  const scaleMax = bands[bands.length - 1]!.max;
   return [
     {
       key: 'footprint',
       title: 'Neighbourhood footprint',
       body:
-        'The carbon your whole neighbourhood adds each year, in tonnes. Everyday choices push it up or down, ' +
-        'and a bigger footprint makes floods and landslides more likely.',
+        `The carbon your whole neighbourhood adds each year, on a scale from ${scaleMin} to ${scaleMax} tonnes. ` +
+        'Everyday choices push it up or down, and the further right the pointer sits, the more likely floods and ' +
+        "landslides are. After each year's question, an arrow shows which way the footprint would go if your " +
+        'neighbourhood made your choice.',
     },
     {
       key: 'bank',

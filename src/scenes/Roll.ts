@@ -4,6 +4,7 @@ import { getHouse, type GameState, type YearRecord } from '../sim/state';
 import { data, state } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
+import { playDisasterSound } from '../ui/audio';
 import { DISASTER_NAME } from '../ui/copy';
 import { dieKey } from '../ui/dice';
 import { drawHUD } from '../ui/HUD';
@@ -134,6 +135,7 @@ export class Roll extends Phaser.Scene {
   }
 
   private disasterEffect(disaster: 'flood' | 'landslide', box: ArtBox): void {
+    playDisasterSound(this, disaster);
     if (disaster === 'flood') {
       const ground = groundY(box);
       // Tween scaleY, not height: Phaser 4 rectangles don't redraw when height changes.

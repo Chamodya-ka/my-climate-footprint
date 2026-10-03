@@ -132,7 +132,9 @@ export class HouseScene extends Phaser.Scene {
         question: quizForYear(d, s.year),
         from: hud.footprintBox,
         nav: this.nav,
-        onAnswer: (answerId) => apply(answerQuiz(state(), d, answerId)),
+        onAnswer: (answerId) => {
+          if (apply(answerQuiz(state(), d, answerId))) hud.setTrend(state().thisYear.quiz?.footprintDelta ?? null);
+        },
         // Restart once the feedback is closed, so the upgrades unlock.
         onDone: () => this.scene.restart({}),
       });

@@ -1,12 +1,13 @@
 import * as Phaser from 'phaser';
 import { loadGameData } from '../data';
+import { installAudio, preloadAudio } from '../ui/audio';
 import { setData } from '../session';
 import { makeDiceTextures } from '../ui/dice';
 import { makeIconTextures } from '../ui/icons';
 import { buildHouseAssets, preloadHouseAssets } from '../ui/houseAssets';
 import { buildRegionMap, preloadMap } from '../ui/regionMap';
 
-/** Validates all data files (failing loudly), loads the map and makes generated textures. */
+/** Validates all data files (failing loudly), loads the map and audio, and makes generated textures. */
 export class Boot extends Phaser.Scene {
   constructor() {
     super('Boot');
@@ -15,6 +16,7 @@ export class Boot extends Phaser.Scene {
   preload(): void {
     preloadMap(this);
     preloadHouseAssets(this);
+    preloadAudio(this);
     this.load.on(Phaser.Loader.Events.FILE_LOAD_ERROR, (file: Phaser.Loader.File) =>
       this.fail(new Error(`Couldn't load ${file.key} (${String(file.url)})`)),
     );
@@ -37,6 +39,7 @@ export class Boot extends Phaser.Scene {
     g.destroy();
     makeIconTextures(this);
     makeDiceTextures(this);
+    installAudio(this.game);
     this.scene.start('Title');
   }
 

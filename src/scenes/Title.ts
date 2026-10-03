@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import { newGame } from '../sim/turn';
 import { data, randomSeed, startNewGame } from '../session';
+import { playMenuMusic } from '../ui/audio';
 import { Button, FocusNav } from '../ui/buttons';
 import { lastCalendarYear, PLACEHOLDER_NOTE } from '../ui/copy';
 import { textBlock } from '../ui/panels';
@@ -13,6 +14,7 @@ export class Title extends Phaser.Scene {
 
   create(): void {
     const d = data();
+    playMenuMusic(this.game);
     this.add.text(WIDTH / 2, 150, 'My Climate Footprint', text.title).setOrigin(0.5);
     this.add.text(WIDTH / 2, 210, 'A game about floods, landslides and where you choose to live', text.h2).setOrigin(0.5);
     textBlock(
