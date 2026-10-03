@@ -6,7 +6,7 @@
  * - every review covers cause → effect → what helped or would have helped;
  * - placeholder numbers are "game values", never real-world data.
  */
-import type { Area, Disaster, GameData, Mod, QuizPriority, QuizQuestion } from '../data/schemas';
+import type { Area, Disaster, GameData, Mod, QuizPriority, QuizQuestion, Region } from '../data/schemas';
 import { bestMissingMod } from '../sim/advice';
 import { damageIfHit } from '../sim/damage';
 import { formatMoney, formatTonnes } from '../sim/format';
@@ -199,43 +199,43 @@ export function quizFeedback(question: QuizQuestion, answerId: string): QuizFeed
   };
 }
 
-export interface HudIntroStep {
-  key: 'footprint' | 'bank' | 'houseValue' | 'repairCost';
-  title: string;
-  body: string;
+export interface KiwiStep {
+  /** HUD box to highlight while the kiwi talks about it, if any. */
+  key?: 'footprint' | 'bank' | 'houseValue' | 'repairCost';
+  text: string;
 }
 
-/** The short tour of the HUD boxes, shown at the start of a new game. */
-export function hudIntro(data: GameData): HudIntroStep[] {
-  const { startingBudget, incomePercentOfHouseValue, actionsPerRepair } = data.balance;
+/** What the kiwi guide says after Start: the carbon footprint, money, then how a year works. Short sentences. */
+export function kiwiIntro(data: GameData): KiwiStep[] {
+  const { startingBudget, incomePercentOfHouseValue, actionsPerTurn } = data.balance;
   return [
+    { text: "Kia ora! I'm Kiwi. I'll show you how to keep your home safe." },
     {
       key: 'footprint',
-      title: 'Carbon footprint',
-      body:
-        'The carbon added each year, in tonnes. ' +
-        'The choices you make push it up or down, and a bigger footprint makes floods and landslides more likely.',
+      text: 'This is the carbon footprint. Your choices push it up or down. A bigger footprint means more floods and landslides.',
     },
     {
       key: 'bank',
-      title: 'Bank',
-      body:
-        `Your money. You start with ${formatMoney(startingBudget)}, and each year starts with ${incomePercentOfHouseValue}% of what you paid for your house added. ` +
-        `It pays for your house, upgrades and repairs, and can't go below $0.`,
+      text:
+        `This is your bank. You start with ${formatMoney(startingBudget)}. ` +
+        `Each year you earn ${incomePercentOfHouseValue}% of what you paid for your house.`,
     },
     {
       key: 'houseValue',
-      title: 'House value',
-      body:
-        "What your house is worth. Each flood or landslide that hits takes a share of it, and if it falls to $0 the " +
-        "house is destroyed and the game ends. It's $0 until you buy a house.",
+      text: "This is your house's value. Floods and landslides knock it down. If it reaches $0, your house is destroyed.",
     },
     {
       key: 'repairCost',
-      title: 'Total repair cost',
-      body:
-        `What it would cost to fix all the damage right now. Repairing takes ${actionsPerRepair} action and brings the house ` +
-        'back to full value, so each year you choose between repairing and preparing.',
+      text: 'This is what repairs would cost right now. Repairing fixes all the damage, but it uses an action.',
+    },
+    { text: 'Each year starts with a big decision. Make the right call to keep the carbon footprint down.' },
+    {
+      text:
+        `Then you get ${actionsPerTurn} actions. Spend them on upgrades or repairs. ` +
+        'Pick upgrades that suit the hazards where you live.',
+    },
+    {
+      text: `Keep your house standing until the end of ${lastCalendarYear(data)} to win. First, choose where to live. Good luck!`,
     },
   ];
 }
@@ -256,4 +256,29 @@ export function titleIntro(data: GameData): { tagline: string; body: string } {
       `Then get ready: you have ${data.balance.actionsPerTurn} actions a year to upgrade or repair. ` +
       'Prepare for the hazards where you live, and the next storm does far less damage.',
   };
+}
+
+export interface KiwiLine {
+  heading?: string;
+  text: string;
+}
+
+/** Kiwi's question on the region map: where to live, or where to move after selling. Short sentences. */
+export function kiwiWhereToLive(state: GameState): KiwiLine {
+  const move = state.thisYear.move;
+  if (!move) {
+    return { heading: 'Where will you live?', text: 'Where you live decides which hazards you face. Pick a region on the map.' };
+  }
+  return {
+    heading: 'Where will you move?',
+    text: `You sold your house for ${formatMoney(move.saleValue)}. Moving uses the rest of this year. Pick a region on the map.`,
+  };
+}
+
+/**
+ * Kiwi's short take on a region: what it's like and what to watch out for. It doesn't
+ * repeat the region's name, which is on the map label.
+ */
+export function kiwiRegionLine(data: GameData, region: Region): KiwiLine {
+  return { text: `${region.blurb} Watch out for ${regionHazardLabel(data, region.id).toLowerCase()}.` };
 }

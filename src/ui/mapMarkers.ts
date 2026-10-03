@@ -55,8 +55,9 @@ abstract class MapMarker extends Phaser.GameObjects.Container implements Focusab
     this.setScale(focused ? FOCUS_SCALE : 1);
     this.refresh();
     if (focused) {
-      this.opts.onFocus?.();
+      // Announce first, so an onFocus handler can follow up with a fuller announcement.
       announce(this.describe());
+      this.opts.onFocus?.();
     }
   }
 

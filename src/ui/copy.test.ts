@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../data';
 import type { DisasterResult } from '../sim/state';
 import { dataWith, FLOOD_HOUSE, LANDSLIDE_HOUSE, startedGame, YEAR1_QUESTION } from '../sim/testHelpers';
-import { applyMod, endTurn, expectOk } from '../sim/turn';
-import { quizFeedback, yearReview, yearVerdict } from './copy';
+import { applyMod, endTurn, expectOk, newGame, sell } from '../sim/turn';
+import { kiwiIntro, kiwiRegionLine, kiwiWhereToLive, quizFeedback, yearReview, yearVerdict } from './copy';
 
 const data = loadGameData();
 const question = data.quiz[0]!;
@@ -121,5 +121,60 @@ describe('yearReview', () => {
     const none = review(always, FLOOD_HOUSE)[2]!;
     expect(none.tone).toBe('bad');
     expect(none.text).toMatch(/^You didn't have any upgrades to protect against floods/);
+  });
+});
+
+describe('kiwiIntro', () => {
+  const steps = kiwiIntro(data);
+  const all = steps.map((s) => s.text).join(' ');
+
+  it('explains the carbon footprint, money and how the game works', () => {
+    expect(steps.map((s) => s.key).filter(Boolean)).toEqual(['footprint', 'bank', 'houseValue', 'repairCost']);
+    expect(all).toMatch(/carbon footprint/);
+    expect(all).toMatch(/upgrades or repairs/);
+    expect(all).toMatch(/to win/);
+  });
+
+  it('takes its numbers from the game data', () => {
+    expect(all).toContain('$1,500,000');
+    expect(all).toContain(`${data.balance.incomePercentOfHouseValue}%`);
+    expect(all).toContain(`${data.balance.actionsPerTurn} actions`);
+    expect(all).toContain(`${data.balance.startYear + data.balance.gameLengthYears - 1}`);
+  });
+
+  it('speaks in short sentences', () => {
+    const MAX_WORDS = 16;
+    for (const sentence of all.split(/(?<=[.!?])\s+/)) expect(sentence.split(/\s+/).length).toBeLessThanOrEqual(MAX_WORDS);
+  });
+});
+
+describe("Kiwi's question on the region map", () => {
+  const MAX_WORDS = 16;
+  const short = (text: string) => {
+    for (const sentence of text.split(/(?<=[.!?])\s+/)) expect(sentence.split(/\s+/).length).toBeLessThanOrEqual(MAX_WORDS);
+  };
+
+  it('asks where to live, in short sentences', () => {
+    const line = kiwiWhereToLive(newGame(data, 1));
+    expect(line.heading).toBe('Where will you live?');
+    short(line.text);
+  });
+
+  it('asks where to move after selling, with the sale value', () => {
+    const sold = expectOk(sell(startedGame(), data));
+    const line = kiwiWhereToLive(sold);
+    expect(line.heading).toBe('Where will you move?');
+    expect(line.text).toContain(`$${sold.thisYear.move!.saleValue.toLocaleString('en-NZ')}`);
+    short(line.text);
+  });
+
+  it('describes each region briefly and names its hazard', () => {
+    for (const region of data.regions) {
+      const line = kiwiRegionLine(data, region);
+      expect(line.heading).toBeUndefined();
+      expect(line.text).not.toContain(region.name);
+      expect(line.text).toMatch(/Watch out for (floods|landslides)\.$/);
+      short(line.text);
+    }
   });
 });
