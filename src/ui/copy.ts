@@ -66,7 +66,7 @@ export function modTooltip(mod: Mod): string {
   const kind =
     mod.type === 'consumable'
       ? 'Used up when its disaster hits; restock it afterwards. Adds nothing to the house value.'
-      : `Permanent: stays with this house and adds ${formatMoney(mod.cost)} to its value.`;
+      : 'Permanent: stays with this house and adds to its value.';
   return `${mod.blurb}\n${kind}`;
 }
 
