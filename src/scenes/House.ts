@@ -8,7 +8,7 @@ import { Button, FocusNav, type ButtonOptions } from '../ui/buttons';
 import { modTooltip } from '../ui/copy';
 import { confirmDialog } from '../ui/confirm';
 import { drawHUD } from '../ui/HUD';
-import { drawHouseScene, FULL_SCREEN_ART, houseDamageLevel, spotPositions } from '../ui/houseArt';
+import { drawHouseScene, FULL_SCREEN_ART, houseDamageLevel, preloadBackdrop, spotPositions } from '../ui/houseArt';
 import { modIconKey } from '../ui/houseAssets';
 import { createHouseTransition } from '../ui/houseTransitions';
 import { openPopover } from '../ui/popover';
@@ -59,13 +59,17 @@ export class HouseScene extends Phaser.Scene {
     this.sys.settings.data = {};
   }
 
+  preload(): void {
+    preloadBackdrop(this, data(), state().house);
+  }
+
   create(): void {
     const d = data();
     const s = state();
     const house = s.house as HouseState;
     const houseDef = getHouse(d, house.houseId);
 
-    drawHouseScene(this, d, houseDef, house, FULL_SCREEN_ART).setDepth(-10);
+    drawHouseScene(this, d, houseDef, house, FULL_SCREEN_ART, { live: true }).setDepth(-10);
     const hud = drawHUD(this, d, s);
 
     this.nav = new FocusNav(this);
