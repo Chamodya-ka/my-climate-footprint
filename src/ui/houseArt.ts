@@ -15,8 +15,8 @@ import { FONT, HEIGHT, WIDTH } from './theme';
  *   drifting clouds, birds, boats and cars, split into a layer behind the house and one
  *   over it (street cars, flood water, rain), so overlays still sit between them.
  * Mod overlays and "+" markers are placed from the sprite's measured zones and
- * the designer's "+" positions. Each overlay has a small text tag so mods aren't
- * shown by colour alone.
+ * the designer's "+" positions. Overlays are drawn shapes with no text labels; a
+ * destroyed house keeps its "Destroyed" tag.
  */
 
 /** The designer's stage: backgrounds are 1600×1000, and the 1200×900 sprite sits centred at 94% of the stage height. */
@@ -128,20 +128,9 @@ export function drawHouseScene(
   c.add(g);
 
   const mods = new Set([...(house?.permanentMods ?? []), ...(house?.consumables ?? [])]);
-  // Tags are hidden in small previews, where they'd cover the house.
-  const showTags = s > 0.4;
-  const tag = (x: number, y: number, label: string) => {
-    if (!showTags) return;
-    c.add(
-      scene.add
-        .text(x, y, label, { fontFamily: FONT, fontSize: '14px', color: '#10202b', backgroundColor: '#ffffff', padding: { x: 4, y: 2 } })
-        .setOrigin(0.5),
-    );
-  };
   const px = (n: number) => Math.max(1, n * s); // sprite-pixel sizes → screen
   const { door, foundation, garden } = zones.zones;
   const wall = zones.wall;
-  const footY = foundation.y + foundation.h;
   // On stilted and hillside houses the foundation runs far below the walls, so wall-mounted
   // overlays are anchored to the walls and door instead.
   const wallBottom = wall.y + wall.h;
@@ -155,8 +144,6 @@ export function drawHouseScene(
       const q = at(foundation.x + (foundation.w * (i + 0.5)) / posts, foundation.y);
       g.fillRect(q.x - px(9), q.y, px(18), px(foundation.h + 40));
     }
-    const q = at(foundation.x, footY);
-    tag(q.x - 40, q.y - px(foundation.h / 2), 'Elevated');
   }
   if (mods.has('foundation')) {
     // A concrete band just under the walls (the foundation zone can run far down a slope).
@@ -164,16 +151,12 @@ export function drawHouseScene(
     const q = at(foundation.x - 10, foundation.y);
     g.fillStyle(0x9aa3ab).fillRect(q.x, q.y, px(foundation.w + 20), px(bandH));
     g.lineStyle(px(4), 0x4f5860).strokeRect(q.x, q.y, px(foundation.w + 20), px(bandH));
-    const t = at(foundation.x + foundation.w / 2, foundation.y + bandH + 24);
-    tag(t.x, t.y + 6, 'Foundation');
   }
 
   // Door zone.
   if (mods.has('seal-doors')) {
     const q = at(door.x - 8, door.y - 8);
     g.lineStyle(px(12), 0x222222).strokeRect(q.x, q.y, px(door.w + 16), px(door.h + 8));
-    const t = at(door.cx, door.y);
-    tag(t.x, t.y - 14, 'Sealed');
   }
   if (mods.has('sandbags')) {
     g.fillStyle(0xc9b27c).lineStyle(px(3), 0x7a6a48);
@@ -183,14 +166,11 @@ export function drawHouseScene(
         g.fillEllipse(q.x, q.y, px(40), px(24)).strokeEllipse(q.x, q.y, px(40), px(24));
       }
     }
-    const t = at(door.x - 100, doorBase);
-    tag(t.x, t.y + 14, 'Sandbags');
   }
   if (mods.has('store-food')) {
     const q = at(door.x + door.w + 30, doorBase - 60);
     g.fillStyle(0xb5884d).fillRect(q.x, q.y, px(60), px(48));
     g.lineStyle(px(4), 0x6b4a2b).strokeRect(q.x, q.y, px(60), px(48));
-    tag(q.x + px(30), q.y - 12, 'Pantry');
   }
 
   // Garden zone: drains and the house's surroundings.
@@ -200,13 +180,11 @@ export function drawHouseScene(
     const bottom = at(wall.x + wall.w + 8, Math.max(wallBottom, doorBase) + 10);
     const out = at(wall.x + wall.w + 110, Math.max(wallBottom, doorBase) + 30);
     g.lineStyle(px(12), 0x5a6b78).lineBetween(top.x, top.y, bottom.x, bottom.y).lineBetween(bottom.x, bottom.y, out.x, out.y);
-    tag(out.x, out.y + 14, 'Drains');
   }
   if (mods.has('retaining-wall')) {
     const q = at(garden.x + 20, garden.y + garden.h * 0.15);
     g.fillStyle(0x8e8e8e).fillRect(q.x, q.y, px(40), px(garden.h * 0.7));
     g.lineStyle(px(4), 0x555555).strokeRect(q.x, q.y, px(40), px(garden.h * 0.7));
-    tag(q.x + px(20), q.y - 12, 'Retaining wall');
   }
   if (mods.has('soil-nailing')) {
     g.fillStyle(0x333333);
@@ -214,8 +192,6 @@ export function drawHouseScene(
       const q = at(garden.x + 90 + (i % 4) * 60, garden.y + garden.h * (0.45 + Math.floor(i / 4) * 0.25));
       g.fillCircle(q.x, q.y, px(10));
     }
-    const t = at(garden.x + 180, garden.y + garden.h * 0.3);
-    tag(t.x, t.y, 'Soil nails');
   }
   if (mods.has('drainage-loose-soil')) {
     g.lineStyle(px(8), 0x5a6b78);
@@ -224,8 +200,6 @@ export function drawHouseScene(
       const b = at(garden.x + 150 + i * 90, garden.y + garden.h * 0.75);
       g.lineBetween(a.x, a.y, b.x, b.y);
     }
-    const t = at(garden.x + 200, garden.y + garden.h * 0.95);
-    tag(t.x, t.y + 8, 'Slope drains');
   }
   if (mods.has('plant-trees')) {
     for (const fx of [0.13, 0.97]) {
@@ -234,8 +208,6 @@ export function drawHouseScene(
       g.fillStyle(0x2e6b34).fillCircle(base.x, base.y - px(140), px(55));
       g.lineStyle(px(4), 0x1f4a24).strokeCircle(base.x, base.y - px(140), px(55));
     }
-    const t = at(garden.x + garden.w * 0.13, garden.y + garden.h * 0.3);
-    tag(t.x, t.y - px(220), 'Trees');
   }
 
   // Flood water left behind sits over the house and its overlays (with street cars and rain, when live).
@@ -247,7 +219,14 @@ export function drawHouseScene(
   if (house?.destroyed) {
     sprite.setTint(0x9a8a7a);
     const mid = at(wall.x + wall.w / 2, wall.y + wall.h / 2);
-    tag(mid.x, mid.y, 'Destroyed');
+    // Hidden in small previews, where it would cover the house.
+    if (s > 0.4) {
+      c.add(
+        scene.add
+          .text(mid.x, mid.y, 'Destroyed', { fontFamily: FONT, fontSize: '14px', color: '#10202b', backgroundColor: '#ffffff', padding: { x: 4, y: 2 } })
+          .setOrigin(0.5),
+      );
+    }
   }
   return c;
 }
