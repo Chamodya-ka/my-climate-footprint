@@ -11,7 +11,10 @@ import { regionAtMap } from './regionMap';
  * House art:
  * - assets/map/disaster_assets: house sprites (clean, one hit, two or more hits), per-house
  *   backgrounds (normal, after a disaster, and a flood-water foreground), "+" positions,
- *   landslip paths and the repair icon.
+ *   landslip paths and the repair icon. For the moving backgrounds, each house also has its
+ *   scenes without clouds or cars (`_base`) split into depth layers (`_sky`, `_far`, `_near`),
+ *   plus the moving pieces in `backgrounds/ambient/`. Layers are big, so they're loaded per
+ *   house when a scene shows it (`preloadAmbient`), not at boot.
  * - assets/map/house_and_region_assets: zone masks and the zoomed region views.
  * - assets/map/mod_icons: an icon per upgrade, and the "+" icon.
  * At boot we measure each zone mask (door, foundation, garden, roof, walls) so overlays
@@ -34,6 +37,11 @@ const backgroundUrls = import.meta.glob('../../assets/map/disaster_assets/backgr
   query: '?url',
   import: 'default',
 }) as Record<string, string>;
+const ambientUrls = import.meta.glob('../../assets/map/disaster_assets/backgrounds/ambient/*.png', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+}) as Record<string, string>;
 const modIconUrls = import.meta.glob('../../assets/map/mod_icons/png/*_128.png', {
   eager: true,
   query: '?url',
@@ -51,6 +59,19 @@ export const damageLevel = (unrepairedHits: number): DamageLevel => (unrepairedH
 export const spriteKey = (sprite: string, level: DamageLevel = 0) => (level ? `house-${sprite}-dmg${level}` : `house-${sprite}`);
 export type BackgroundKind = 'normal' | 'post' | 'post_fg';
 export const backgroundKey = (sprite: string, kind: BackgroundKind) => `bg-${sprite}-${kind}`;
+export type LayerState = 'normal' | 'post';
+export type LayerPart = 'base' | 'sky' | 'far' | 'near';
+const LAYER_PARTS: readonly LayerPart[] = ['base', 'sky', 'far', 'near'];
+/** Riverside scenes have nothing in front of the moving pieces, so they have no `_near` layer. */
+const OPTIONAL_PARTS: readonly LayerPart[] = ['near'];
+export const layerKey = (sprite: string, state: LayerState, part: LayerPart) => `bg-${sprite}-${state}-${part}`;
+const ambientKey = (name: string) => `ambient-${name}`;
+const AMBIENT_PIECES = {
+  clouds: ['cloud_1', 'cloud_2', 'cloud_3'],
+  stormClouds: ['storm_1', 'storm_2', 'storm_3'],
+  cars: ['car_red', 'car_blue', 'car_yellow', 'car_white'],
+  boat: 'boat',
+} as const;
 export const modIconKey = (icon: string) => `mod-icon-${icon}`;
 export const PLUS_ICON = modIconKey('plus');
 export const REPAIR_ICON = 'repair-icon';
@@ -150,6 +171,13 @@ const artBySprite = new Map<string, HouseArt>();
 
 const fileName = (path: string) => path.slice(path.lastIndexOf('/') + 1).replace(/\.png$/, '');
 
+/** Moving-background layer URLs, by texture key. */
+const layerUrls = new Map<string, string>();
+for (const [path, url] of Object.entries(backgroundUrls)) {
+  const m = /^(.*)_(normal|post)_(base|sky|far|near)$/.exec(fileName(path));
+  if (m) layerUrls.set(layerKey(m[1]!, m[2] as LayerState, m[3] as LayerPart), url);
+}
+
 export function preloadHouseAssets(scene: Phaser.Scene): void {
   for (const [path, url] of Object.entries(zonesUrls)) {
     scene.load.image(zonesKey(fileName(path).replace(/_zones$/, '')), url);
@@ -164,6 +192,7 @@ export function preloadHouseAssets(scene: Phaser.Scene): void {
     const m = /^(.*)_(normal|post_fg|post)$/.exec(fileName(path));
     if (m) scene.load.image(backgroundKey(m[1]!, m[2] as BackgroundKind), url);
   }
+  for (const [path, url] of Object.entries(ambientUrls)) scene.load.image(ambientKey(fileName(path)), url);
   for (const [path, url] of Object.entries(modIconUrls)) {
     scene.load.image(modIconKey(fileName(path).replace(/_128$/, '')), url);
   }
@@ -171,6 +200,51 @@ export function preloadHouseAssets(scene: Phaser.Scene): void {
   for (const [path, url] of Object.entries(zoomUrls)) {
     scene.load.image(zoomKey(fileName(path).replace(/^zoom_/, '').replace(/_clean$/, '')), url);
   }
+}
+
+/** Queues the moving-background layers for one house, if they aren't loaded yet. Call from a scene's preload(). */
+export function preloadAmbient(scene: Phaser.Scene, sprite: string): void {
+  for (const state of ['normal', 'post'] as const) {
+    for (const part of LAYER_PARTS) {
+      const key = layerKey(sprite, state, part);
+      const url = layerUrls.get(key);
+      if (url && !scene.textures.exists(key)) scene.load.image(key, url);
+    }
+  }
+}
+
+type Img = HTMLImageElement;
+export interface AmbientAssets {
+  bgNormalBase: Img;
+  bgPostBase: Img;
+  layers: Record<LayerState, { sky: Img; far: Img; near: Img | null }>;
+  clouds: Img[];
+  stormClouds: Img[];
+  cars: Img[];
+  boat: Img;
+}
+
+/** The moving-background images for one house, or null if its layers haven't been loaded (see preloadAmbient). */
+export function getAmbientAssets(scene: Phaser.Scene, sprite: string): AmbientAssets | null {
+  const img = (key: string) => (scene.textures.exists(key) ? (scene.textures.get(key).getSourceImage() as Img) : null);
+  const layer = (state: LayerState, part: LayerPart) => img(layerKey(sprite, state, part));
+  const required = (['normal', 'post'] as const).flatMap((st) =>
+    LAYER_PARTS.filter((p) => !OPTIONAL_PARTS.includes(p)).map((p) => layer(st, p)),
+  );
+  if (required.some((i) => !i)) return null;
+  const pieces = (names: readonly string[]) => names.map((n) => img(ambientKey(n))!);
+  return {
+    bgNormalBase: layer('normal', 'base')!,
+    bgPostBase: layer('post', 'base')!,
+    layers: {
+      normal: { sky: layer('normal', 'sky')!, far: layer('normal', 'far')!, near: layer('normal', 'near') },
+      post: { sky: layer('post', 'sky')!, far: layer('post', 'far')!, near: layer('post', 'near') },
+    },
+    clouds: pieces(AMBIENT_PIECES.clouds),
+    stormClouds: pieces(AMBIENT_PIECES.stormClouds),
+    cars: pieces(AMBIENT_PIECES.cars),
+    boat: img(ambientKey(AMBIENT_PIECES.boat))!,
+  };
 }
 
 export function getZoomData(): ZoomData {
@@ -269,6 +343,10 @@ export function buildHouseAssets(scene: Phaser.Scene, data: GameData): void {
     if (!scene.textures.exists(modIconKey(mod.icon))) problems.push(`mods.json: "${mod.id}" has no mod_icons/png/${mod.icon}_128.png`);
   }
   if (!scene.textures.exists(PLUS_ICON)) problems.push('missing mod_icons/png/plus_128.png');
+  const pieces = Object.values(AMBIENT_PIECES).flat();
+  for (const name of pieces) {
+    if (!scene.textures.exists(ambientKey(name))) problems.push(`missing backgrounds/ambient/${name}.png`);
+  }
 
   for (const house of data.houses) {
     // Disaster art: damage sprites, backgrounds, "+" positions, and a damage kind that matches the area.
@@ -287,6 +365,11 @@ export function buildHouseAssets(scene: Phaser.Scene, data: GameData): void {
       }
       for (const kind of ['normal', 'post'] as const) {
         if (!scene.textures.exists(backgroundKey(house.sprite, kind))) problems.push(`missing backgrounds/${house.sprite}_${kind}.png`);
+        for (const part of LAYER_PARTS) {
+          if (!OPTIONAL_PARTS.includes(part) && !layerUrls.has(layerKey(house.sprite, kind, part))) {
+            problems.push(`missing backgrounds/${house.sprite}_${kind}_${part}.png`);
+          }
+        }
       }
       const toSprite = ([x, y]: [number, number]) => ({ x: x * PLUS_SCALE, y: y * PLUS_SCALE });
       artBySprite.set(house.sprite, {

@@ -37,7 +37,7 @@ function box(
   rowRects: Partial<Record<HudRowKey, BoxRect>>,
 ): BoxRect {
   const items = rows.map((row) => ({
-    icon: scene.add.image(0, 0, row.icon).setOrigin(0, 0.5),
+    icon: scene.add.image(0, 0, row.icon).setOrigin(0, 0.5).setDisplaySize(ICON_SIZE, ICON_SIZE),
     label: scene.add.text(0, 0, row.label.toUpperCase(), { fontFamily: FONT, fontSize: '13px', color: colours.textDim }),
     value: scene.add.text(0, 0, row.value, { fontFamily: FONT, fontSize: '19px', color: colours.text, fontStyle: 'bold' }),
   }));
@@ -179,7 +179,7 @@ function footprintGauge(
   marker.lineStyle(4, colours.bg).lineBetween(0, 0, 0, GAUGE_H);
   marker.lineStyle(2, 0xffffff).lineBetween(0, 0, 0, GAUGE_H);
 
-  const icon = scene.add.image(x + PAD, EDGE + h / 2, 'icon-footprint').setOrigin(0, 0.5);
+  const icon = scene.add.image(x + PAD, EDGE + h / 2, 'icon-footprint').setOrigin(0, 0.5).setDisplaySize(ICON_SIZE, ICON_SIZE);
   const arrow = scene.add.graphics({ x: textX + GAUGE_W + ARROW_GAP + ARROW_W / 2, y: barY + GAUGE_H / 2 }).setVisible(false);
   c.add([bg, icon, label, g, marker, arrow]);
 

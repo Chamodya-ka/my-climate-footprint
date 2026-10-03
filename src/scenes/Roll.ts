@@ -8,7 +8,7 @@ import { playDisasterSound } from '../ui/audio';
 import { drawCalendar, CALENDAR_H, CALENDAR_W } from '../ui/calendar';
 import { calendarYear, yearVerdict } from '../ui/copy';
 import { displayedFootprint, drawHUD } from '../ui/HUD';
-import { drawHouseScene, FULL_SCREEN_ART, houseDamageLevel, type ArtBox } from '../ui/houseArt';
+import { drawHouseScene, FULL_SCREEN_ART, houseDamageLevel, preloadBackdrop, type ArtBox } from '../ui/houseArt';
 import type { DamageLevel } from '../ui/houseAssets';
 import { createHouseTransition, type HouseTransition } from '../ui/houseTransitions';
 import { panel } from '../ui/panels';
@@ -19,7 +19,7 @@ const PANEL_H = 170;
 const INFO_W = 340;
 const GAP = 24;
 const BUTTON_W = 300;
-const INCOME_ICON_SCALE = 1.4;
+const INCOME_ICON_SIZE = 56;
 /** Pause after the last animation (or the verdict, in a quiet year) before the reveal. */
 const SETTLE_MS = 400;
 /** Light rain while the calendar flips; a hit plays the designer's own storm animation. */
@@ -40,6 +40,10 @@ export class Roll extends Phaser.Scene {
     this.before = params.before ?? null;
   }
 
+  preload(): void {
+    preloadBackdrop(this, data(), state().house);
+  }
+
   create(): void {
     const d = data();
     const s = state();
@@ -49,7 +53,7 @@ export class Roll extends Phaser.Scene {
 
     const box: ArtBox = FULL_SCREEN_ART;
     const houseDef = getHouse(d, rec.houseId);
-    let art = drawHouseScene(this, d, houseDef, shown.house, box).setDepth(-1);
+    let art = drawHouseScene(this, d, houseDef, shown.house, box, { live: true }).setDepth(-1);
     this.frame = { type: 'onLeave', source: new Phaser.Geom.Rectangle(box.x, box.y, box.w, box.h) };
 
     // Bottom panel: income, the flipping calendar and what happened, then the continue button.
@@ -64,7 +68,7 @@ export class Roll extends Phaser.Scene {
       const income = d.balance.yearlyIncome;
       const earned = this.add.text(EDGE + 16, heading.y + heading.height + 6, 'You have earned', text.body);
       const rowY = earned.y + earned.height + 32;
-      const icon = this.add.image(EDGE + 16, rowY, 'icon-bank').setOrigin(0, 0.5).setScale(INCOME_ICON_SCALE);
+      const icon = this.add.image(EDGE + 16, rowY, 'icon-bank').setOrigin(0, 0.5).setDisplaySize(INCOME_ICON_SIZE, INCOME_ICON_SIZE);
       const amount = this.add
         .text(icon.x + icon.displayWidth + 12, rowY, `+${formatMoney(income)}`, {
           ...text.h2,
@@ -123,7 +127,7 @@ export class Roll extends Phaser.Scene {
         // change, which the gauge already shows): slide the marker the rest of the way.
         hud = drawHUD(this, d, s, { footprintFrom: displayedFootprint(d, shown) });
         art.destroy();
-        art = drawHouseScene(this, d, houseDef, s.house, box).setDepth(-1);
+        art = drawHouseScene(this, d, houseDef, s.house, box, { live: true }).setDepth(-1);
         transition?.destroy();
         const nav = new FocusNav(this);
         const button = new Button(this, WIDTH - EDGE - 16 - BUTTON_W, py + PANEL_H - 76, BUTTON_W, 60, {

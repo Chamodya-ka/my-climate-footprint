@@ -1,7 +1,8 @@
 import * as Phaser from 'phaser';
 import type { GameData, House, Spot } from '../data/schemas';
-import { getHouse, type HouseState } from '../sim/state';
-import { backgroundKey, damageLevel, getHouseArt, getZones, spriteKey, type DamageLevel, type HouseZones } from './houseAssets';
+import { getArea, getHouse, type HouseState } from '../sim/state';
+import { backgroundKey, damageLevel, getHouseArt, getZones, preloadAmbient, spriteKey, type DamageLevel, type HouseZones } from './houseAssets';
+import { createLiveBackdrop } from './houseTransitions';
 import { FONT, HEIGHT, WIDTH } from './theme';
 
 /*
@@ -10,6 +11,9 @@ import { FONT, HEIGHT, WIDTH } from './theme';
  * - Background: `_normal`, or `_post` once the house has unrepaired damage.
  * - Sprite: clean, `_dmg1` (one unrepaired hit) or `_dmg2` (two or more).
  * - Foreground (flood houses only): the water left behind, over the house.
+ * - Live (the full-screen house views): the designer's moving background instead, with
+ *   drifting clouds, birds, boats and cars, split into a layer behind the house and one
+ *   over it (street cars, flood water, rain), so overlays still sit between them.
  * Mod overlays and "+" markers are placed from the sprite's measured zones and
  * the designer's "+" positions. Each overlay has a small text tag so mods aren't
  * shown by colour alone.
@@ -93,20 +97,31 @@ export function houseDamageLevel(house: HouseState | null): DamageLevel {
   return house.destroyed ? 2 : damageLevel(house.unrepairedHits);
 }
 
+export interface HouseSceneOptions {
+  /** Use the moving background, if the house's layers are loaded (see preloadAmbient); otherwise the still pictures. */
+  live?: boolean;
+}
+
 export function drawHouseScene(
   scene: Phaser.Scene,
-  _data: GameData,
+  data: GameData,
   houseDef: House,
   house: HouseState | null,
   box: ArtBox,
+  options: HouseSceneOptions = {},
 ): Phaser.GameObjects.Container {
   const c = scene.add.container(0, 0);
   const p = placeSprite(box, houseDef);
   const { zones, s, at, stage } = p;
   const level = houseDamageLevel(house);
   const art = getHouseArt(houseDef.sprite);
+  const region = data.regions.find((r) => r.id === getArea(data, houseDef.areaId).regionId)!.mapRegion;
+  const live = options.live ? createLiveBackdrop(scene, houseDef, region, level, stage) : null;
 
-  c.add(scene.add.image(stage.x, stage.y, backgroundKey(houseDef.sprite, level > 0 ? 'post' : 'normal')).setOrigin(0).setScale(stage.scale));
+  c.add(
+    live?.back ??
+      scene.add.image(stage.x, stage.y, backgroundKey(houseDef.sprite, level > 0 ? 'post' : 'normal')).setOrigin(0).setScale(stage.scale),
+  );
   const sprite = scene.add.image(p.ox, p.oy, spriteKey(houseDef.sprite, level)).setOrigin(0).setScale(s);
   c.add(sprite);
   const g = scene.add.graphics();
@@ -223,8 +238,10 @@ export function drawHouseScene(
     tag(t.x, t.y - px(220), 'Trees');
   }
 
-  // Flood water left behind sits over the house and its overlays.
-  if (level > 0 && art.hasForeground) {
+  // Flood water left behind sits over the house and its overlays (with street cars and rain, when live).
+  if (live) {
+    c.add(live.front);
+  } else if (level > 0 && art.hasForeground) {
     c.add(scene.add.image(stage.x, stage.y, backgroundKey(houseDef.sprite, 'post_fg')).setOrigin(0).setScale(stage.scale));
   }
   if (house?.destroyed) {
@@ -235,8 +252,13 @@ export function drawHouseScene(
   return c;
 }
 
-/** The player's house as a full-screen background, behind every other object in the scene. */
+/** Queues the moving-background layers for the player's house. Call from the preload() of scenes that show it live. */
+export function preloadBackdrop(scene: Phaser.Scene, data: GameData, house: HouseState | null): void {
+  if (house) preloadAmbient(scene, getHouse(data, house.houseId).sprite);
+}
+
+/** The player's house as a full-screen, moving background, behind every other object in the scene. */
 export function drawBackdrop(scene: Phaser.Scene, data: GameData, house: HouseState | null): void {
   if (!house) return;
-  drawHouseScene(scene, data, getHouse(data, house.houseId), house, FULL_SCREEN_ART).setDepth(-10);
+  drawHouseScene(scene, data, getHouse(data, house.houseId), house, FULL_SCREEN_ART, { live: true }).setDepth(-10);
 }

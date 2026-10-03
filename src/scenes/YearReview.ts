@@ -6,7 +6,7 @@ import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
 import { calendarYear, yearReview } from '../ui/copy';
 import { drawHUD, HUD_HEIGHT } from '../ui/HUD';
-import { drawBackdrop } from '../ui/houseArt';
+import { drawBackdrop, preloadBackdrop } from '../ui/houseArt';
 import { panel } from '../ui/panels';
 import { colours, FONT, HEIGHT, text, WIDTH } from '../ui/theme';
 
@@ -24,6 +24,10 @@ const FONT_SIZES = [17, 16, 15, 14];
 export class YearReview extends Phaser.Scene {
   constructor() {
     super('YearReview');
+  }
+
+  preload(): void {
+    preloadBackdrop(this, data(), state().house);
   }
 
   create(): void {
