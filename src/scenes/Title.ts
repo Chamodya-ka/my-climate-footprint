@@ -3,7 +3,7 @@ import { newGame } from '../sim/turn';
 import { data, randomSeed, startNewGame } from '../session';
 import { playMenuMusic } from '../ui/audio';
 import { Button, FocusNav } from '../ui/buttons';
-import { lastCalendarYear, PLACEHOLDER_NOTE } from '../ui/copy';
+import { PLACEHOLDER_NOTE, titleIntro } from '../ui/copy';
 import { textBlock } from '../ui/panels';
 import { HEIGHT, text, WIDTH } from '../ui/theme';
 
@@ -16,21 +16,20 @@ export class Title extends Phaser.Scene {
     const d = data();
     playMenuMusic(this.game);
     this.add.text(WIDTH / 2, 150, 'My Climate Footprint', text.title).setOrigin(0.5);
-    this.add.text(WIDTH / 2, 210, 'A game about floods, landslides and where you choose to live', text.h2).setOrigin(0.5);
-    textBlock(
+    const intro = titleIntro(d);
+    const tagline = this.add
+      .text(WIDTH / 2, 205, intro.tagline, { ...text.h2, align: 'center', lineSpacing: 6 })
+      .setOrigin(0.5, 0);
+    const body = textBlock(
       this,
       WIDTH / 2 - 380,
-      270,
+      tagline.y + tagline.height + 28,
       760,
-      `Buy a house in a valley-and-harbour city. Each year you get ` +
-        `${d.balance.actionsPerTurn} actions to prepare or repair, then the weather is rolled. ` +
-        `Keep your house standing from ${d.balance.startYear} to ${lastCalendarYear(d)}.\n\n` +
-        `Assume everyone makes the same everyday choices you do: together they change the carbon footprint, and a bigger footprint ` +
-        `makes floods and landslides more likely.`,
+      intro.body,
     ).setAlign('center');
     const nav = new FocusNav(this);
     nav.add(
-      new Button(this, WIDTH / 2 - 140, 470, 280, 64, {
+      new Button(this, WIDTH / 2 - 140, body.y + body.height + 40, 280, 64, {
         label: 'Start',
         fontSize: 26,
         onActivate: () => {

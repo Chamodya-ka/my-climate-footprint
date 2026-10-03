@@ -1,20 +1,19 @@
 /**
  * Player-facing text built from sim state. Pure functions (no Phaser) so the
  * framing rules can be checked in one place:
- * - talk about the carbon footprint as if everyone made the player's choices, never one household causing a disaster;
+ * - the player's choices (in the roles the questions give them) move the carbon footprint; never say a choice
+ *   caused a specific flood or landslide;
  * - every review covers cause → effect → what helped or would have helped;
  * - placeholder numbers are "game values", never real-world data.
  */
 import type { Area, Disaster, GameData, Mod, QuizPriority, QuizQuestion } from '../data/schemas';
-import { bestMissingMod, modsThatDontFit } from '../sim/advice';
-import { damageIfHit, hitsLeft, reductionFrom } from '../sim/damage';
-import { repairCost } from '../sim/economy';
+import { bestMissingMod } from '../sim/advice';
+import { damageIfHit } from '../sim/damage';
 import { formatMoney, formatTonnes } from '../sim/format';
 import {
   getArea,
   getHouse,
-  getMod,
-  getQuestion,
+  activeMods,
   type DisasterResult,
   type GameState,
   type HouseState,
@@ -76,107 +75,89 @@ export function damageIfHitLine(data: GameData, house: HouseState): string {
   return area.disasters.map((d) => `${DISASTER_NAME[d]} ${damageIfHit(data, house, d)}%`).join(' · ');
 }
 
-function footprintCause(data: GameData, rec: YearRecord): string {
-  const q = getQuestion(data, rec.quiz.questionId);
-  const answer = q.answers.find((a) => a.id === rec.quiz.answerId);
-  const parts = [`yearly rise ${signedTonnes(rec.baseIncrement)}`];
-  parts.push(`the "${answer?.label ?? rec.quiz.answerId}" choice ${signedTonnes(rec.quiz.footprintDelta)}`);
-  if (rec.modFootprintDelta !== 0) parts.push(`mods ${signedTonnes(rec.modFootprintDelta)}`);
-  return (
-    `Assuming everyone made the same choices you did, the carbon footprint went from ${formatTonnes(rec.footprintBefore)} ` +
-    `to ${formatTonnes(rec.footprintAfter)} (${parts.join(', ')}).`
-  );
+/** What the year's choice did to the carbon footprint, and so to the odds, in words (no figures). */
+/** How a review box reads at a glance; the words always say the same thing, so colour is never the only signal. */
+export type ReviewTone = 'good' | 'warn' | 'bad';
+
+export interface ReviewBox {
+  text: string;
+  tone: ReviewTone;
 }
 
-export interface ReviewSection {
-  title: string;
-  body: string;
+/** What the year's choice did to the carbon footprint, by the answer's own change. */
+function footprintCause(rec: YearRecord): ReviewBox {
+  const delta = rec.quiz.footprintDelta;
+  if (delta < 0) return { text: 'Your choice decreased the carbon footprint.', tone: 'good' };
+  if (delta > 0) return { text: 'Your choice increased the carbon footprint.', tone: 'bad' };
+  return { text: "Your choice didn't affect the carbon footprint.", tone: 'warn' };
 }
 
-/** Year review: cause → effect → what helped / would have helped. */
-export function yearReview(data: GameData, state: GameState, rec: YearRecord): ReviewSection[] {
+/** Why a disaster like this happens here, tied to climate change but never to the player's choice. */
+function disasterWhy(area: Area, disaster: Disaster): string {
+  if (disaster === 'landslide') {
+    return 'Heavy rain soaked the slope until the ground gave way, and heavier downpours are one of the consequences of climate change.';
+  }
+  const causes = area.floodCauses.length ? `Floods here come from ${listJoin(area.floodCauses)}. ` : '';
+  return `${causes}Climate change is bringing heavier rain and stronger storms, so floods like this are becoming more common.`;
+}
+
+const TONE_RANK: Record<ReviewTone, number> = { good: 0, warn: 1, bad: 2 };
+const worst = (tones: ReviewTone[]): ReviewTone => tones.reduce((w, t) => (TONE_RANK[t] > TONE_RANK[w] ? t : w), 'good');
+
+/**
+ * Year review: three short boxes in words, no figures, each with a tone for its colour:
+ * what the year's choice did to the carbon footprint → whether a disaster damaged the
+ * house (and why) → how well prepared the house was, without naming upgrades.
+ */
+export function yearReview(data: GameData, state: GameState, rec: YearRecord): ReviewBox[] {
   const area = getArea(data, rec.areaId);
   const house = state.house!;
-  const sections: ReviewSection[] = [];
-
-  const causeLines = [footprintCause(data, rec)];
+  const effect: string[] = [];
+  const effectTones: ReviewTone[] = [];
+  const help: string[] = [];
+  const helpTones: ReviewTone[] = [];
   for (const r of rec.results) {
-    causeLines.push(
-      `That set the ${lower(r.disaster)} chance at ${r.chancePercent}%. ` +
-        (r.hit
-          ? `A ${lower(r.disaster)} hit ${area.name}.` +
-            (r.disaster === 'flood' && area.floodCauses.length
-              ? ` Here, floods come from ${listJoin(area.floodCauses)}.`
-              : r.disaster === 'landslide'
-                ? ' Heavy rain soaked the slope until the ground gave way.'
-                : '')
-          : `No ${lower(r.disaster)} this year.`),
-    );
-  }
-  sections.push({ title: 'Cause', body: causeLines.join('\n') });
-
-  const effectLines: string[] = [];
-  const helpLines: string[] = [];
-  for (const r of rec.results) {
+    const what = lower(r.disaster);
     if (!r.hit) {
-      effectLines.push(`The house wasn't damaged by a ${lower(r.disaster)}.`);
-      const tip = bestMissingMod(data, [...house.permanentMods, ...house.consumables], r.disaster);
-      helpLines.push(
-        tip
-          ? `To prepare for next time: ${tip.mod.name} would cut ${lower(r.disaster)} damage from ${tip.actualPercent}% to ${tip.withModPercent}%.`
-          : `The house is as prepared for ${plural(r.disaster)} as it can be: ${plural(r.disaster)} would do the ${data.balance.minDamagePercent}% minimum.`,
-      );
+      effect.push(`Your house wasn't damaged by a ${what} this year.`);
+      effectTones.push('good');
+      // Preparation is described in general terms, without naming upgrades.
+      const helping = activeMods(data, house).filter((m) => (m.reductions[r.disaster] ?? 0) > 0);
+      const canDoMore = bestMissingMod(data, [...house.permanentMods, ...house.consumables], r.disaster) !== null;
+      if (helping.length === 0) {
+        help.push(`You don't have any upgrades to protect against ${plural(r.disaster)} yet.`);
+        helpTones.push('bad');
+      } else if (canDoMore) {
+        help.push(`Your upgrades will help when a ${what} comes, but you could do more to prepare.`);
+        helpTones.push('warn');
+      } else {
+        help.push(`You've done all you could to prepare for ${plural(r.disaster)}.`);
+        helpTones.push('good');
+      }
       continue;
     }
-    const reductions = r.helpedBy.map((id) => {
-      const mod = getMod(data, id);
-      return `${mod.reductions[r.disaster]} (${mod.name})`;
-    });
-    const sum = reductionFrom(r.helpedBy.map((id) => getMod(data, id)), r.disaster);
-    const maths = reductions.length
-      ? `${r.basePercent}% − ${reductions.join(' − ')}` +
-        (r.basePercent - sum < data.balance.minDamagePercent ? ` → the ${data.balance.minDamagePercent}% minimum` : '') +
-        ` = ${r.effectivePercent}%`
-      : `${r.effectivePercent}%`;
-    effectLines.push(
-      `Damage: ${maths} of the house's full value${reductions.length ? '' : `, with no preparation for ${plural(r.disaster)}`}. ` +
-        `The house lost ${formatMoney(r.valueLost)}.`,
-    );
-    if (r.consumablesUsed.length) {
-      effectLines.push(`${listJoin(r.consumablesUsed.map((id) => getMod(data, id).name))} got used up. Restocking takes 1 action.`);
-    }
-    if (r.helpedBy.length) {
-      helpLines.push(`What helped: ${listJoin(r.helpedBy.map((id) => getMod(data, id).name))} saved ${r.basePercent - r.effectivePercent} points of damage.`);
-    }
-    const tip = bestMissingMod(data, r.helpedBy, r.disaster);
-    if (tip) {
-      helpLines.push(`What would have helped: ${tip.mod.name} would have cut this hit from ${tip.actualPercent}% to ${tip.withModPercent}%.`);
-    }
-  }
 
-  if (rec.destroyed) {
-    effectLines.push('The damage added up: the house has been destroyed.');
-  } else {
-    effectLines.push(`The house is worth ${formatMoney(house.value)} of its full ${formatMoney(house.fullValue)}.`);
-    if (house.value < house.fullValue) {
-      const left = Math.min(...area.disasters.map((d) => hitsLeft(data, house, d)));
-      effectLines.push(
-        `Unrepaired, it can take ${left} more hit${left === 1 ? '' : 's'}. ` +
-          `Repairing costs ${formatMoney(repairCost(data, house))} and 1 action, which is an action not spent preparing.`,
-      );
+    effect.push(`Your house was damaged by a ${what}. ${disasterWhy(area, r.disaster)}`);
+    effectTones.push('bad');
+    const canDoMore = bestMissingMod(data, r.helpedBy, r.disaster) !== null;
+    if (r.helpedBy.length === 0) {
+      help.push(`You didn't have any upgrades to protect against ${plural(r.disaster)}, so the house took the full hit.`);
+      helpTones.push('bad');
+    } else if (canDoMore) {
+      help.push('Your upgrades helped reduce the damage, but you could do more to prepare.');
+      helpTones.push('warn');
+    } else {
+      help.push('Your upgrades helped reduce the damage, and you did all you could.');
+      helpTones.push('good');
     }
   }
-  sections.push({ title: 'Effect', body: effectLines.join('\n') });
+  if (rec.destroyed) effect.push('The damage added up, and your house has been destroyed.');
 
-  const misfits = modsThatDontFit(data, house);
-  if (misfits.length) {
-    helpLines.push(
-      `${listJoin(misfits.map((m) => m.name))} ${misfits.length === 1 ? "doesn't" : "don't"} help here: ` +
-        `${area.name} faces ${listJoin(area.disasters.map(plural))}.`,
-    );
-  }
-  sections.push({ title: 'What helped', body: helpLines.join('\n') || 'Nothing to add this year.' });
-  return sections;
+  return [
+    footprintCause(rec),
+    { text: effect.join('\n'), tone: worst(effectTones) },
+    { text: help.join('\n'), tone: worst(helpTones) },
+  ];
 }
 
 export const PLACEHOLDER_NOTE = 'Prices, footprints and odds are game values, not real-world data.';
@@ -192,7 +173,7 @@ export interface QuizFeedback {
   /** True when the answer has the lowest footprint change of the options (ties count). */
   correct: boolean;
   verdict: string;
-  /** What the choice does to the carbon footprint, in the "assuming everyone makes the same choice" framing. */
+  /** What the choice does to the carbon footprint (direction only, no figures). */
   footprintLine: string;
   /** The lowest-footprint answers. */
   best: QuizQuestion['answers'];
@@ -212,7 +193,9 @@ export function quizFeedback(question: QuizQuestion, answerId: string): QuizFeed
     verdict: correct
       ? '✓ Good choice: the lowest-footprint option.'
       : `✗ Not the best choice: ${listJoin(best.map((a) => `"${a.label}"`))} would be lower.`,
-    footprintLine: `Assuming everyone makes the same choice you do, the carbon footprint would ${change}.`,
+    footprintLine: correct
+      ? `You made the right call, so the carbon footprint would ${change}.`
+      : `With this choice, the carbon footprint would ${change}.`,
   };
 }
 
@@ -230,8 +213,8 @@ export function hudIntro(data: GameData): HudIntroStep[] {
       key: 'footprint',
       title: 'Carbon footprint',
       body:
-        'The carbon added each year, in tonnes, assuming everyone makes the same choices you do. ' +
-        'Everyday choices push it up or down, and a bigger footprint makes floods and landslides more likely.',
+        'The carbon added each year, in tonnes. ' +
+        'The choices you make push it up or down, and a bigger footprint makes floods and landslides more likely.',
     },
     {
       key: 'bank',
@@ -260,4 +243,17 @@ export function hudIntro(data: GameData): HudIntroStep[] {
 /** After answering: the COP31 priority behind the question and its global goal. */
 export function cop31Line(priority: QuizPriority): string {
   return `COP31 priority: ${priority.name}. Goal: ${priority.goal}`;
+}
+
+/** The title screen's pitch: a two-line tagline and a short how-to-play. */
+export function titleIntro(data: GameData): { tagline: string; body: string } {
+  return {
+    tagline: 'Your choices change how often disaster strikes.\nYour preparation decides how much it hurts.',
+    body:
+      `Buy a home in a valley-and-harbour city and keep it standing from ${data.balance.startYear} to ${lastCalendarYear(data)}.\n\n` +
+      'Each year starts with a big decision. Make the right call, ' +
+      'and floods and landslides come less often.\n\n' +
+      `Then get ready: you have ${data.balance.actionsPerTurn} actions a year to upgrade or repair. ` +
+      'Prepare for the hazards where you live, and the next storm does far less damage.',
+  };
 }

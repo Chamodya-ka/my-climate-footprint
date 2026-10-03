@@ -98,7 +98,7 @@ export interface GameState {
   year: number;
   bank: number;
   actionsLeft: number;
-  /** Carbon footprint in tonnes, assuming everyone makes the player's choices. Never below 0. */
+  /** Carbon footprint in tonnes, moved by the player's choices. Never below balance.minFootprint. */
   footprint: number;
   house: HouseState | null;
   /** Set while moving: the house just sold, which can't be bought straight back. */
