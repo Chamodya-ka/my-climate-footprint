@@ -14,6 +14,16 @@ export interface ButtonOptions {
   fontSize?: number;
   /** Text alignment; centred unless a list reads better left-aligned (e.g. upgrade rows). */
   align?: 'left' | 'center';
+  /** Fill, border and label style for a button that should match its screen (e.g. Title's Start); the standard look otherwise. */
+  look?: ButtonLook;
+}
+
+export interface ButtonLook {
+  fill: number;
+  edge: number;
+  edgeWidth: number;
+  /** Extra label style, e.g. bold with an outline. */
+  label?: Phaser.Types.GameObjects.Text.TextStyle;
 }
 
 /** Anything FocusNav can move focus between. */
@@ -66,6 +76,7 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
       color: colours.text,
       align: opts.align ?? 'center',
       wordWrap: { width: w - TEXT_PAD * 2 },
+      ...opts.look?.label,
     });
     if (!opts.detail) this.labelText.setOrigin(originX, 0.5);
     else this.labelText.setOrigin(originX, 0).setWordWrapWidth(null);
@@ -155,8 +166,10 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
       this.bg.setStrokeStyle(FOCUS_BORDER, colours[`${this.tone}Edge`]);
       return;
     }
-    this.bg.setFillStyle(this.disabled ? colours.buttonDisabled : colours.button);
-    this.bg.setStrokeStyle(this.focused ? FOCUS_BORDER : BORDER, this.focused ? colours.focus : colours.panelEdge);
+    const look = this.opts.look;
+    this.bg.setFillStyle(this.disabled ? colours.buttonDisabled : (look?.fill ?? colours.button));
+    if (this.focused) this.bg.setStrokeStyle(FOCUS_BORDER, colours.focus);
+    else this.bg.setStrokeStyle(look?.edgeWidth ?? BORDER, look?.edge ?? colours.panelEdge);
   }
 }
 

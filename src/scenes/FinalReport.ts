@@ -12,6 +12,7 @@ import { modIconKey } from '../ui/houseAssets';
 import type { IconKey } from '../ui/icons';
 import { panel, textBlock } from '../ui/panels';
 import { colours, FONT, HEIGHT, text, WIDTH } from '../ui/theme';
+import { sceneConfig } from '../ui/resolution';
 
 const EDGE = 16;
 /** Space between a column's edge and its content. */
@@ -24,7 +25,7 @@ const ROW: Phaser.Types.GameObjects.Text.TextStyle = { ...text.body, fontSize: '
 
 export class FinalReport extends Phaser.Scene {
   constructor() {
-    super('FinalReport');
+    super(sceneConfig('FinalReport'));
   }
 
   create(): void {

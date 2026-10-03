@@ -13,6 +13,7 @@ import { MapView } from '../ui/mapView';
 import { openPopover, type PopoverAnchor } from '../ui/popover';
 import { getRegionMap } from '../ui/regionMap';
 import { colours, FONT, HEIGHT, text, WIDTH } from '../ui/theme';
+import { sceneConfig } from '../ui/resolution';
 
 const EDGE = 16;
 const PAD = 18;
@@ -41,7 +42,7 @@ export class HouseSelect extends Phaser.Scene {
   private nav!: FocusNav;
 
   constructor() {
-    super('HouseSelect');
+    super(sceneConfig('HouseSelect'));
   }
 
   init(params: { regionId: string }): void {

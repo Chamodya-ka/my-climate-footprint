@@ -52,6 +52,7 @@ src/
               advice.ts (what helped / would have helped), format.ts, quiz.ts (question order), *.test.ts
   scenes/     Boot, Title, RegionSelect, HouseSelect, House (incl. the year's question), Roll, YearReview, FinalReport
   ui/         HUD, buttons (Button + FocusNav), panels, houseArt, houseAssets, copy, theme, a11y, icons, spots,
+              resolution (sharp rendering), titleClouds,
               regionMap + mapView + mapMarkers (the valley map), audio (music + sound effects)
   data/       areas.json, houses.json, weather.json, mods.json, quiz.json, balance.json, schemas.ts, index.ts
 assets/       map (valley map art, house_and_region_assets: house sprites + zone masks + zoomed region views), interface_icons (HUD icons), sprites, audio (source recordings; game/ holds the processed files), LICENSES.md
@@ -278,7 +279,7 @@ Example entry in `quiz.json`:
 - **Rimu's tips on the House screen** (`showKiwiTip()` in `kiwiGuide.ts`; once per game, tracked by `takeKiwiTip()` in `session.ts`): Rimu points at buttons with a pulsing outline and a bobbing arrow above each, over a lightly dimmed screen, and explains them in one short bubble with "Got it" (or Escape). (1) Straight after the first question: the "+" buttons ("See these upgrade buttons? Upgrades protect your house from climate hazards. You can only add 3 each year."; `kiwiUpgradeTip()`). (2) When the upgrade window closes after the player's first upgrade, Rimu comes back and points at the two year-end buttons, "Sell and Move" and "Finish Upgrades", saying in plain words, without quoting the button labels, that the player can keep upgrading, finish upgrades for the year, or sell the house and move (`kiwiYearEndTip()`); it doesn't point at Repair.
 - **RegionSelect:** the valley map (`assets/map`) fills the screen. Each region has a label (name and hazards, drawn from game data, not the labels baked into `cartoon_regions.png`). There's no text panel: Rimu asks the question. Hovering anywhere in a region highlights it and Rimu says a short line about it (`kiwiRegionLine()`: the region's blurb and "Watch out for floods.", without repeating the region's name, which is on the label); clicking anywhere in it, or its label, selects it.
 - **HouseSelect:** the map zooms into the region's crop (`zoom_data.json`), then cross-fades to the close-up art `zoom/zoom_<mapRegion>_clean.png`, top-aligned so houses near the top clear the HUD. Each house is drawn as its sprite at its `zoom_data` pin with a price tag ("$595k / Standard"); focus order is left to right. Choosing a house opens a popover like the upgrade windows (`openPopover()` in `src/ui/popover.ts`): it grows out of the house with a tail pointing at it, has the red × on its top-right corner (Escape and clicking outside also close it) and doesn't dim the map. It shows the house name, facts (tier, bedrooms, floor area, year built, floor height; no price), a preview and the blurb (no area or hazard line), plus the reason when it can't be bought, and a centred "Buy for $X" button. "Back to the map" (bottom left) returns to RegionSelect. Unaffordable houses are dimmed but can still be opened, so the window can say why.
-- **Title:** the valley map under a very dark wash (90% of the background colour), so white text stays readable over it. Just the game's name, a two-line tagline ("Your choices affect how often climate hazards strike. / Your preparation decides how much it hurts."), one line with the goal ("Buy a home and keep it standing.") and Start (`titleIntro()` in `copy.ts`). No how-to-play text (Rimu explains the game after Start) and no disclaimer line.
+- **Title:** the valley map under a light wash (12% of the background colour), with soft white cloud silhouettes drifting across it (`addTitleClouds()` in `src/ui/titleClouds.ts`, drawn in code; still with reduced motion). The white text has a black outline (`outline` in `theme.ts`) so it reads over the map. On Start the title fades and the clouds part to either side (just fade with reduced motion), then RegionSelect opens on the same map. Just the game's name, a two-line tagline ("Your choices affect how often climate hazards strike. / Your preparation decides how much it hurts."), one line with the goal ("Buy a home and keep it standing.") and Start (`titleIntro()` in `copy.ts`). No how-to-play text (Rimu explains the game after Start) and no disclaimer line.
 
 ## Content and tone
 
@@ -308,6 +309,7 @@ Example entry in `quiz.json`:
     | textDisabled `#b3bdc6` | buttonDisabled `#252d34` | 7.3 |
     | good `#9ff0b4` / warn `#ffd166` / bad `#ffa89c` | panel | 11.8 / 11.0 / 8.6 |
     | map label secondary text `#3a4757` | white | 9.5 |
+    | text (Title's Start button) | `titleButton` green `#1a6335` | 7.3 |
 
 ## Map
 
@@ -322,6 +324,9 @@ Example entry in `quiz.json`:
 - `assets/map/cartoon2.py` regenerates the map. It reads `terrain.npz` and `regions_mask.png`, which aren't in the repo, and has hard-coded output paths.
 
 ## Phaser 4 notes
+
+- **Resolution** (`src/ui/resolution.ts`): every layout uses the 1280×720 stage (`WIDTH`×`HEIGHT`), but the canvas is `RENDER_SCALE` times larger (from the screen size × `devicePixelRatio`, quarter steps, 1–3), so it stays sharp when scaled to fit. Every scene passes `sceneConfig(key)` to `super()`, whose main camera zooms by `RENDER_SCALE` and scrolls so stage (0, 0) stays top-left; `installCrispText()` makes `add.text()` rasterise at the same scale. Use `pointer.worldX/worldY` (not `pointer.x/y`) for stage positions, and don't use `setScrollFactor(0)` (the camera's scroll is what keeps the stage in place).
+- **Favicon:** `public/favicon.svg` (a house in a storm and floodwater), linked from `index.html`.
 
 - `GeometryMask` only works in the Canvas renderer. Keep particles inside an area with a `deathZone` instead.
 - Tweening a Rectangle's `height` doesn't redraw it. Tween `scaleY` instead.

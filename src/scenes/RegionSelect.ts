@@ -8,11 +8,12 @@ import { RegionLabel, rgbToNumber } from '../ui/mapMarkers';
 import { MapView } from '../ui/mapView';
 import { getRegionMap } from '../ui/regionMap';
 import { drawHUD } from '../ui/HUD';
+import { sceneConfig } from '../ui/resolution';
 
 /** The valley map: Rimu asks where to live; hover a region to hear about it, click it (or its label) to see its houses. */
 export class RegionSelect extends Phaser.Scene {
   constructor() {
-    super('RegionSelect');
+    super(sceneConfig('RegionSelect'));
   }
 
   create(): void {
@@ -63,14 +64,14 @@ export class RegionSelect extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
       if (touring.on) return;
       if (over.length > 0) return; // over a label or Rimu's speech bubble
-      const key = map.regionAt(p.x, p.y);
+      const key = map.regionAt(p.worldX, p.worldY);
       const label = key ? labelFor.get(key) : undefined;
       if (label) nav.focus(label);
     });
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
       if (touring.on) return;
       if (over.length > 0) return; // a label handles its own clicks; the speech bubble swallows them
-      const key = map.regionAt(p.x, p.y);
+      const key = map.regionAt(p.worldX, p.worldY);
       const region = d.regions.find((r) => r.mapRegion === key);
       if (region) select(region.id);
     });

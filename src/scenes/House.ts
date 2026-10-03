@@ -16,6 +16,7 @@ import { openPopover } from '../ui/popover';
 import { showQuestion } from '../ui/questionDialog';
 import { SpotButton } from '../ui/spots';
 import { HEIGHT, text, WIDTH } from '../ui/theme';
+import { sceneConfig } from '../ui/resolution';
 
 const EDGE = 16;
 const PAD = 12;
@@ -53,7 +54,7 @@ export class HouseScene extends Phaser.Scene {
   private yearEndTargets: KiwiTarget[] = [];
 
   constructor() {
-    super('House');
+    super(sceneConfig('House'));
   }
 
   init(params: HouseParams): void {

@@ -9,6 +9,7 @@ import { drawHUD, HUD_HEIGHT } from '../ui/HUD';
 import { drawBackdrop, preloadBackdrop } from '../ui/houseArt';
 import { panel } from '../ui/panels';
 import { colours, FONT, HEIGHT, text, WIDTH } from '../ui/theme';
+import { sceneConfig } from '../ui/resolution';
 
 const EDGE = 16;
 const PAD = 14;
@@ -25,7 +26,7 @@ const FONT_SIZES = [17, 16, 15, 14];
  */
 export class YearReview extends Phaser.Scene {
   constructor() {
-    super('YearReview');
+    super(sceneConfig('YearReview'));
   }
 
   preload(): void {

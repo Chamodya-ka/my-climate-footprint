@@ -14,6 +14,7 @@ import type { DamageLevel } from '../ui/houseAssets';
 import { createHouseTransition, type HouseTransition } from '../ui/houseTransitions';
 import { panel } from '../ui/panels';
 import { colours, HEIGHT, text, WIDTH } from '../ui/theme';
+import { sceneConfig } from '../ui/resolution';
 
 const EDGE = 16;
 const PANEL_H = 170;
@@ -34,7 +35,7 @@ export class Roll extends Phaser.Scene {
   private frame: Phaser.Types.GameObjects.Particles.DeathZoneObject | null = null;
 
   constructor() {
-    super('Roll');
+    super(sceneConfig('Roll'));
   }
 
   init(params: { before?: GameState }): void {

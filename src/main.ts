@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
-import { colours, HEIGHT, WIDTH } from './ui/theme';
+import { colours } from './ui/theme';
+import { CANVAS_SIZE, installCrispText } from './ui/resolution';
 import { Boot } from './scenes/Boot';
 import { Title } from './scenes/Title';
 import { RegionSelect } from './scenes/RegionSelect';
@@ -9,11 +10,14 @@ import { Roll } from './scenes/Roll';
 import { YearReview } from './scenes/YearReview';
 import { FinalReport } from './scenes/FinalReport';
 
+installCrispText();
+
+// The canvas is drawn near the screen's real pixel size; each scene's camera zooms to fit the WIDTH×HEIGHT layout (see ui/resolution.ts).
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
-  width: WIDTH,
-  height: HEIGHT,
+  width: CANVAS_SIZE.width,
+  height: CANVAS_SIZE.height,
   backgroundColor: colours.bg,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
   scene: [Boot, Title, RegionSelect, HouseSelect, HouseScene, Roll, YearReview, FinalReport],

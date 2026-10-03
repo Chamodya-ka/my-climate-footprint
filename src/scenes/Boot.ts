@@ -5,11 +5,12 @@ import { setData } from '../session';
 import { preloadIcons } from '../ui/icons';
 import { buildHouseAssets, preloadHouseAssets } from '../ui/houseAssets';
 import { buildRegionMap, preloadMap } from '../ui/regionMap';
+import { sceneConfig } from '../ui/resolution';
 
 /** Validates all data files (failing loudly), loads the map, icons and audio, and makes generated textures. */
 export class Boot extends Phaser.Scene {
   constructor() {
-    super('Boot');
+    super(sceneConfig('Boot'));
   }
 
   preload(): void {

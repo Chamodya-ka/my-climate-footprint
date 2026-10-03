@@ -37,6 +37,23 @@ export const colours = {
 
 export const FONT = 'system-ui, "Segoe UI", Roboto, sans-serif';
 
+/** Black outlines for white text drawn straight over pictures (no box behind it), so it reads on light and dark areas. */
+export const outline = {
+  title: { stroke: '#000000', strokeThickness: 12 },
+  text: { stroke: '#000000', strokeThickness: 8 },
+} as const;
+
+/**
+ * The Title screen's Start button: forest green like the map's trees, with a black border and an
+ * outlined bold label like the title. White on this green is 7.3:1 (AAA).
+ */
+export const titleButton = {
+  fill: 0x1a6335,
+  edge: 0x000000,
+  edgeWidth: 3,
+  label: { fontStyle: 'bold', stroke: '#000000', strokeThickness: 5 },
+} as const;
+
 export const text = {
   title: { fontFamily: FONT, fontSize: '48px', color: colours.text, fontStyle: 'bold' },
   h1: { fontFamily: FONT, fontSize: '32px', color: colours.text, fontStyle: 'bold' },
