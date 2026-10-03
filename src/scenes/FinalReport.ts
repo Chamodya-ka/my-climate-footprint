@@ -45,7 +45,7 @@ export class FinalReport extends Phaser.Scene {
         y: 0,
         w: rightX - gapX,
         h: HEIGHT,
-      }).setDepth(-10);
+      }, { noDestroyedLabel: true }).setDepth(-10);
     }
     const top = EDGE;
     const colH = HEIGHT - EDGE * 2;

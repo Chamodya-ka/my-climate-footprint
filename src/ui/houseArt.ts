@@ -3,7 +3,7 @@ import type { GameData, House, Spot } from '../data/schemas';
 import { getArea, getHouse, type HouseState } from '../sim/state';
 import { backgroundKey, damageLevel, getHouseArt, getZones, preloadAmbient, spriteKey, type DamageLevel, type HouseZones } from './houseAssets';
 import { createLiveBackdrop } from './houseTransitions';
-import { FONT, HEIGHT, WIDTH } from './theme';
+import { colours, HEIGHT, text, WIDTH } from './theme';
 
 /*
  * A house scene, laid out like the designer's disaster assets: everything sits on
@@ -16,7 +16,7 @@ import { FONT, HEIGHT, WIDTH } from './theme';
  *   over it (street cars, flood water, rain), so overlays still sit between them.
  * Mod overlays and "+" markers are placed from the sprite's measured zones and
  * the designer's "+" positions. Overlays are drawn shapes with no text labels; a
- * destroyed house keeps its "Destroyed" tag.
+ * destroyed house gets a large "Destroyed" label on a dark bar across the middle of the view.
  */
 
 /** The designer's stage: backgrounds are 1600×1000, and the 1200×900 sprite sits centred at 94% of the stage height. */
@@ -25,6 +25,8 @@ const SPRITE_H = STAGE.h * 0.94;
 const SPRITE_W = (SPRITE_H * 4) / 3;
 export const SPRITE_ON_STAGE = { x: (STAGE.w - SPRITE_W) / 2, y: (STAGE.h - SPRITE_H) / 2, w: SPRITE_W, h: SPRITE_H };
 const SPRITE_PX = { w: 1200, h: 900 };
+/** Height of the bar behind the "Destroyed" label, in screen pixels. */
+const DESTROYED_BAR_H = 72;
 /** Height of the foundation-improvement band, in sprite pixels. */
 const FOUNDATION_BAND = 50;
 
@@ -100,6 +102,8 @@ export function houseDamageLevel(house: HouseState | null): DamageLevel {
 export interface HouseSceneOptions {
   /** Use the moving background, if the house's layers are loaded (see preloadAmbient); otherwise the still pictures. */
   live?: boolean;
+  /** Leave out the "Destroyed" bar, where the view is too small for it and the screen already says so. */
+  noDestroyedLabel?: boolean;
 }
 
 export function drawHouseScene(
@@ -218,15 +222,13 @@ export function drawHouseScene(
   }
   if (house?.destroyed) {
     sprite.setTint(0x9a8a7a);
-    const mid = at(wall.x + wall.w / 2, wall.y + wall.h / 2);
-    // Hidden in small previews, where it would cover the house.
-    if (s > 0.4) {
-      c.add(
-        scene.add
-          .text(mid.x, mid.y, 'Destroyed', { fontFamily: FONT, fontSize: '14px', color: '#10202b', backgroundColor: '#ffffff', padding: { x: 4, y: 2 } })
-          .setOrigin(0.5),
-      );
-    }
+  }
+  if (house?.destroyed && !options.noDestroyedLabel) {
+    // A dark, opaque bar across the middle of the view, so the word reads over any background.
+    const cx = box.x + box.w / 2;
+    const cy = box.y + box.h / 2;
+    c.add(scene.add.rectangle(cx, cy, box.w, DESTROYED_BAR_H, colours.bg).setStrokeStyle(2, colours.panelEdge));
+    c.add(scene.add.text(cx, cy, 'Destroyed', { ...text.h1, color: colours.bad }).setOrigin(0.5));
   }
   return c;
 }
