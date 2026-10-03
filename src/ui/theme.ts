@@ -22,6 +22,13 @@ export const colours = {
   good: '#9ff0b4',
   warn: '#ffd166',
   bad: '#ffa89c',
+  /** Button fills for a right / so-so / wrong answer; white text on each is at least 7:1. */
+  goodFill: 0x1a6335,
+  warnFill: 0x6b4e00,
+  badFill: 0x8f2a2a,
+  goodEdge: 0x9ff0b4,
+  warnEdge: 0xffd166,
+  badEdge: 0xffa89c,
   sky: 0x87b5d6,
   grass: 0x5e8c4a,
   water: 0x2f7dbf,

@@ -1,231 +1,146 @@
 import * as Phaser from 'phaser';
-import type { QuizPriority, QuizQuestion } from '../data/schemas';
+import type { QuizQuestion } from '../data/schemas';
 import { announce } from './a11y';
 import { Button, FocusNav } from './buttons';
-import { cop31Line, quizFeedback } from './copy';
+import { quizFeedback, type QuizFeedback } from './copy';
 import type { BoxRect } from './HUD';
-import { colours, FONT, HEIGHT, text, WIDTH } from './theme';
+import { addKiwi, type KiwiBubble, type KiwiPart } from './kiwiGuide';
+import { colours, HEIGHT, WIDTH } from './theme';
 
-const W = 760;
-const PAD = 20;
+/** Wider than Kiwi's usual bubble, so answers fit on one or two lines. */
+const BUBBLE_W = 520;
 const BTN_H = 52;
-/** Answer buttons fit a two-line label. */
-const ANSWER_H = 64;
+const ANSWER_H = 48;
 const ANSWER_FONT = 17;
-const GAP = 10;
-const COLS = 2;
+const GAP = 6;
 const CONTINUE_W = 200;
-/** Gap between the footprint box and the bubble, bridged by the bubble's tail. */
-const TAIL = 18;
-/** Where along the bubble's top edge the tail sits. */
-const TAIL_X = 46;
-const GROW_MS = 380;
-const SHRINK_MS = 240;
+/** Inset of buttons from the bubble's sides (the bubble's own padding). */
+const SIDE = 18;
+/** How long the chosen answer stays coloured before Kiwi explains (under a second). */
+const VERDICT_MS = 700;
+const FADE_MS = 300;
 const PULSE_MS = 600;
 const DIM = 0.45;
 /** Above the house, below the HUD, so the footprint box stays bright. */
 const BLOCKER_DEPTH = 9;
-const BUBBLE_DEPTH = 21;
-const RADIUS = 14;
+const RING_DEPTH = 21;
 
 export interface QuestionDialogOptions {
   question: QuizQuestion;
-  /** The COP31 priority the question is about: named, with its goal, only after answering. */
-  priority: QuizPriority;
-  /** The HUD's carbon footprint box: the bubble grows out of it. */
+  /** The HUD's carbon footprint box, outlined while the question is open: the answer moves it. */
   from: BoxRect;
+  /** What Kiwi says before asking, and after explaining the answer (leading into the upgrades). */
+  intro: string;
+  outro: string;
   /** Main nav to pause until the question is answered. */
   nav: FocusNav;
   /** Called as soon as an answer is chosen, to record it. */
   onAnswer: (answerId: string) => void;
-  /** Called after the player has read the feedback and the bubble has closed. */
+  /** Called after the player has read the feedback and Kiwi has gone. */
   onDone: () => void;
 }
 
 /**
- * The year's "What would you do?" question, as a speech bubble that grows out
- * of the carbon footprint box. It can't be dismissed. The question
- * itself says nothing about footprints; once answered, the same bubble says
- * whether the choice was the best one, which way it moves the carbon footprint
- * (no figures), and explains the chosen option only. Continue closes it.
+ * The year's "What would you do?" question, asked by Kiwi in its speech bubble. It can't
+ * be dismissed. Kiwi first says what's coming (`intro`), then asks. The question itself
+ * says nothing about footprints. Choosing an answer
+ * colours it green (right), yellow (no change) or red (raises the footprint), with a ✓,
+ * – or ✗, for a moment; then Kiwi explains in short sentences why, names the best answer
+ * if it wasn't chosen. Last, Kiwi leads into the upgrades (`outro`) and leaves.
  */
 export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): void {
   opts.nav.enabled = false;
-  const { from, question, priority } = opts;
+  const { from, question } = opts;
 
   const blocker = scene.add.rectangle(0, 0, WIDTH, HEIGHT, 0x000000, DIM).setOrigin(0).setDepth(BLOCKER_DEPTH).setInteractive();
   blocker.setAlpha(0);
-  scene.tweens.add({ targets: blocker, alpha: 1, duration: GROW_MS });
+  scene.tweens.add({ targets: blocker, alpha: 1, duration: FADE_MS });
 
   // A pulsing outline on the footprint box ties the question to it (shape and motion, not just colour).
   const ring = scene.add
     .rectangle(from.x - 4, from.y - 4, from.w + 8, from.h + 8)
     .setOrigin(0)
     .setStrokeStyle(4, colours.focus)
-    .setDepth(BUBBLE_DEPTH);
+    .setDepth(RING_DEPTH);
   scene.tweens.add({ targets: ring, alpha: 0.25, duration: PULSE_MS, yoyo: true, repeat: -1 });
 
-  // The bubble is built around its tail tip, so it can grow out of (and shrink back into) the box.
-  const tipX = from.x + TAIL_X;
-  const tipY = from.y + from.h + 2;
-  const bubble = scene.add.container(tipX, tipY).setDepth(BUBBLE_DEPTH);
-  const left = from.x - tipX; // bubble's left edge, relative to the tip
-  const top = TAIL;
-  const inner = W - PAD * 2;
-  const x0 = left + PAD;
-
-  const bg = scene.add.graphics();
-  const drawBubble = (h: number) => {
-    bg.clear();
-    bg.fillStyle(colours.panel).fillRoundedRect(left, top, W, h, RADIUS);
-    bg.lineStyle(3, colours.focus).strokeRoundedRect(left, top, W, h, RADIUS);
-    // The tail, pointing up at the footprint box.
-    bg.fillStyle(colours.panel).fillTriangle(-12, top + 2, 12, top + 2, 0, 0);
-    bg.lineStyle(3, colours.focus).lineBetween(-12, top, 0, 0).lineBetween(0, 0, 12, top);
-  };
-  const title = scene.add.text(x0, top + PAD, 'What would you do?', text.h2);
-  const prompt = scene.add.text(x0, title.y + title.height + 6, question.prompt, {
-    fontFamily: FONT,
-    fontSize: '19px',
-    color: colours.text,
-    wordWrap: { width: inner },
-  });
-  bubble.add([bg, title, prompt]);
-  const contentTop = prompt.y + prompt.height + PAD;
-
+  const kiwi = addKiwi(scene, true);
   const nav = new FocusNav(scene);
-  nav.enabled = false; // until the bubble has finished growing
 
   const close = () => {
-    nav.enabled = false;
-    scene.tweens.add({ targets: blocker, alpha: 0, duration: SHRINK_MS });
-    scene.tweens.add({
-      targets: bubble,
-      scale: 0,
-      alpha: 0,
-      duration: SHRINK_MS,
-      ease: 'Back.easeIn',
-      onComplete: () => {
-        nav.destroy();
-        bubble.destroy();
-        ring.destroy();
-        blocker.destroy();
-        opts.onDone();
-      },
-    });
+    nav.destroy();
+    kiwi.destroy();
+    ring.destroy();
+    blocker.destroy();
+    opts.onDone();
   };
 
-  // Stage 2: the same bubble explains the options.
-  const showFeedback = (answerId: string) => {
-    nav.clear(); // removes the answer buttons
-    const fb = quizFeedback(question, answerId);
-    const items: Phaser.GameObjects.Text[] = [];
-    let y = contentTop;
-    const add = (t: Phaser.GameObjects.Text, gapAfter: number) => {
-      t.setPosition(x0, y);
-      items.push(t);
-      y += t.height + gapAfter;
-    };
-    add(
-      scene.add.text(0, 0, fb.verdict, {
-        fontFamily: FONT,
-        fontSize: '19px',
-        color: fb.correct ? colours.good : colours.bad,
-        fontStyle: 'bold',
-        wordWrap: { width: inner },
-      }),
-      6,
-    );
-    add(
-      scene.add.text(0, 0, fb.footprintLine, {
-        fontFamily: FONT,
-        fontSize: '16px',
-        color: colours.text,
-        lineSpacing: 3,
-        wordWrap: { width: inner },
-      }),
-      PAD - 4,
-    );
-    // Only the chosen answer is explained, to keep the bubble short.
-    const chosen = question.answers.find((a) => a.id === answerId)!;
-    add(
-      scene.add.text(0, 0, `▶ ${chosen.label}`, {
-        fontFamily: FONT,
-        fontSize: '16px',
-        color: colours.focusText,
-        fontStyle: 'bold',
-        wordWrap: { width: inner },
-      }),
-      2,
-    );
-    add(
-      scene.add.text(0, 0, chosen.explanation, {
-        fontFamily: FONT,
-        fontSize: '15px',
-        color: colours.textDim,
-        wordWrap: { width: inner },
-      }),
-      8,
-    );
-    // The COP31 priority and real-world goal behind the question, only after answering.
-    add(
-      scene.add.text(0, 0, cop31Line(priority), {
-        fontFamily: FONT,
-        fontSize: '15px',
-        color: colours.text,
-        wordWrap: { width: inner },
-      }),
-      8,
-    );
-    bubble.add(items);
-    const cont = new Button(scene, left + W - PAD - CONTINUE_W, y + 4, CONTINUE_W, BTN_H, {
-      label: 'Continue',
+  /** A single button at the bottom right of a bubble, focused. */
+  const oneButton = (bubble: KiwiBubble, label: string, onActivate: () => void) => {
+    const b = new Button(scene, bubble.x + bubble.w - SIDE - CONTINUE_W, bubble.footerY, CONTINUE_W, BTN_H, {
+      label,
       fontSize: 20,
-      onActivate: close,
+      onActivate,
     });
-    bubble.add(cont);
-    nav.add(cont);
-    drawBubble(y + 4 + BTN_H + PAD - top);
-    announce(`${fb.verdict} ${fb.footprintLine} ${cop31Line(priority)}`);
-    nav.enabled = true;
-    nav.focus(cont);
+    bubble.layer.add(b);
+    nav.add(b);
+    nav.focus(b);
   };
 
-  // Stage 1: the question and its answers.
-  const rows = Math.ceil(question.answers.length / COLS);
-  const bw = (inner - (COLS - 1) * GAP) / COLS;
-  question.answers.forEach((answer, i) => {
-    const b = new Button(
-      scene,
-      x0 + (i % COLS) * (bw + GAP),
-      contentTop + Math.floor(i / COLS) * (ANSWER_H + GAP),
-      bw,
-      ANSWER_H,
-      {
+  /** Kiwi says a few short paragraphs, with a button to move on. */
+  const sayParts = (parts: KiwiPart[], label: string, next: () => void) => {
+    nav.clear(); // the old bubble's buttons go with it
+    oneButton(kiwi.say(parts, { width: BUBBLE_W, footer: BTN_H }), label, next);
+  };
+
+  /** Kiwi says one line, with a button to move on. */
+  const sayThen = (line: string, label: string, next: () => void) => sayParts([{ text: line }], label, next);
+
+  // Stage 3: Kiwi explains the chosen answer, then (in a bubble of its own) the best one
+  // if that wasn't chosen, then leads into the upgrades and leaves.
+  const explain = (fb: QuizFeedback) => {
+    nav.enabled = true;
+    const outro = () => sayThen(opts.outro, "Let's go", close);
+    const best = () => sayParts(fb.bestLines.map((line) => ({ text: line })), 'Continue', outro);
+    sayParts(
+      [{ text: fb.verdict, colour: colours[fb.tone], bold: true }, ...fb.lines.map((line) => ({ text: line }))],
+      fb.bestLines.length ? 'Next' : 'Continue',
+      fb.bestLines.length ? best : outro,
+    );
+  };
+
+  // Stage 2: Kiwi asks, with one answer per row.
+  const ask = () => {
+    nav.clear();
+    const n = question.answers.length;
+    const bubble = kiwi.say(question.prompt, {
+      heading: 'What would you do?',
+      width: BUBBLE_W,
+      footer: n * ANSWER_H + (n - 1) * GAP,
+    });
+    let answered = false;
+    question.answers.forEach((answer, i) => {
+      const b = new Button(scene, bubble.x + SIDE, bubble.footerY + i * (ANSWER_H + GAP), bubble.w - SIDE * 2, ANSWER_H, {
         label: answer.label,
         fontSize: ANSWER_FONT,
         onActivate: () => {
+          if (answered) return;
+          answered = true;
+          nav.enabled = false;
           opts.onAnswer(answer.id);
-          showFeedback(answer.id);
+          // Colour the choice for a moment, then explain.
+          const fb = quizFeedback(question, answer.id);
+          b.setTone(fb.tone);
+          announce(fb.verdict);
+          scene.time.delayedCall(VERDICT_MS, () => explain(fb));
         },
-      },
-    );
-    bubble.add(b);
-    nav.add(b);
-  });
-  drawBubble(contentTop - top + rows * ANSWER_H + (rows - 1) * GAP + PAD);
+      });
+      bubble.layer.add(b);
+      nav.add(b);
+    });
+    nav.focusIndex(0);
+  };
 
-  bubble.setScale(0).setAlpha(0);
-  announce(`What would you do? ${question.prompt}`);
-  scene.tweens.add({
-    targets: bubble,
-    scale: 1,
-    alpha: 1,
-    duration: GROW_MS,
-    ease: 'Back.easeOut',
-    onComplete: () => {
-      nav.enabled = true;
-      nav.focusIndex(0);
-    },
-  });
+  // Stage 1: Kiwi says what's coming.
+  sayThen(opts.intro, 'Next', ask);
 }

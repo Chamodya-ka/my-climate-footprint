@@ -3,7 +3,18 @@ import { loadGameData } from '../data';
 import type { DisasterResult } from '../sim/state';
 import { dataWith, FLOOD_HOUSE, LANDSLIDE_HOUSE, startedGame, YEAR1_QUESTION } from '../sim/testHelpers';
 import { applyMod, endTurn, expectOk, newGame, sell } from '../sim/turn';
-import { kiwiIntro, kiwiRegionLine, kiwiWhereToLive, quizFeedback, yearReview, yearVerdict } from './copy';
+import {
+  kiwiAfterQuestion,
+  kiwiBeforeQuestion,
+  kiwiIntro,
+  kiwiRegionLine,
+  kiwiUpgradeTip,
+  kiwiWhereToLive,
+  kiwiYearEndTip,
+  quizFeedback,
+  yearReview,
+  yearVerdict,
+} from './copy';
 
 const data = loadGameData();
 const question = data.quiz[0]!;
@@ -13,33 +24,59 @@ const best = byDelta(correct.footprintDelta);
 const worse = byDelta(wrong.footprintDelta);
 
 describe('quizFeedback', () => {
-  it('marks the lowest-footprint answer as correct', () => {
+  const middle = byDelta(neutral.footprintDelta);
+
+  it('marks the lowest-footprint answer as correct, in green', () => {
     const f = quizFeedback(question, best.id);
     expect(f.correct).toBe(true);
+    expect(f.tone).toBe('good');
     expect(f.verdict).toMatch(/^✓/);
     expect(f.footprintLine).toContain('go down');
+    expect(f.lines[0]).toBe(best.explanation);
+    expect(f.bestLines).toEqual([]);
   });
 
-  it('marks other answers as incorrect and names the best one', () => {
+  it('marks a footprint-raising answer as wrong, in red, and explains the best one separately', () => {
     const f = quizFeedback(question, worse.id);
     expect(f.correct).toBe(false);
+    expect(f.tone).toBe('bad');
     expect(f.verdict).toMatch(/^✗/);
-    expect(f.verdict).toContain(`"${best.label}"`);
     expect(f.footprintLine).toContain('go up');
+    expect(f.lines).toEqual([worse.explanation, f.footprintLine]);
+    expect(f.bestLines).toEqual([`The best choice was "${best.label}".`, best.explanation]);
+  });
+
+  it('marks a no-change answer in yellow, and still names the best one', () => {
+    const f = quizFeedback(question, middle.id);
+    expect(f.tone).toBe('warn');
+    expect(f.verdict).toMatch(/^–/);
+    expect(f.footprintLine).toContain('stay the same');
+    expect(f.bestLines[0]).toContain(best.label);
   });
 
   it('shows no tonne figures', () => {
     for (const a of question.answers) expect(quizFeedback(question, a.id).footprintLine).not.toMatch(/\d/);
   });
 
-  it('describes a zero change as staying the same', () => {
-    expect(quizFeedback(question, byDelta(neutral.footprintDelta).id).footprintLine).toContain('stay the same');
-  });
-
   it("frames the change as the player's choice, never blaming it for a specific disaster", () => {
     expect(quizFeedback(question, best.id).footprintLine).toMatch(/^You made the right call, so the carbon footprint/);
     expect(quizFeedback(question, worse.id).footprintLine).toMatch(/^With this choice, the carbon footprint/);
     for (const a of question.answers) expect(quizFeedback(question, a.id).footprintLine).not.toMatch(/flood|landslide/i);
+  });
+});
+
+describe("Kiwi's lines around the question", () => {
+  it('leads in before the question, differently after the first year', () => {
+    const first = startedGame();
+    expect(kiwiBeforeQuestion(first)).toBe("Now let's see how good you are at keeping your carbon footprint down.");
+    expect(kiwiBeforeQuestion({ ...first, year: 2 })).not.toBe(kiwiBeforeQuestion(first));
+  });
+
+  it('leads into the upgrades afterwards, or into repairs when the house is damaged', () => {
+    const fresh = startedGame();
+    expect(kiwiAfterQuestion(fresh)).toBe("Now let's see how you could upgrade your house to handle climate disasters.");
+    const damaged = { ...fresh, house: { ...fresh.house!, value: fresh.house!.value - 1 } };
+    expect(kiwiAfterQuestion(damaged)).toMatch(/^Your house is damaged\. Now repair it/);
   });
 });
 
@@ -176,5 +213,26 @@ describe("Kiwi's question on the region map", () => {
       expect(line.text).toMatch(/Watch out for (floods|landslides)\.$/);
       short(line.text);
     }
+  });
+});
+
+describe("Kiwi's tips on the House screen", () => {
+  const MAX_WORDS = 16;
+  const short = (text: string) => {
+    for (const sentence of text.split(/(?<=[.!?])\s+/)) expect(sentence.split(/\s+/).length).toBeLessThanOrEqual(MAX_WORDS);
+  };
+
+  it('explains the + buttons and the yearly upgrade limit from the game data', () => {
+    const tip = kiwiUpgradeTip(data);
+    expect(tip).toContain('+ buttons');
+    expect(tip).toContain(`only do ${data.balance.actionsPerTurn / data.balance.actionsPerMod} each year`);
+    short(tip);
+  });
+
+  it('explains the Sell and Finish buttons in short sentences', () => {
+    const tip = kiwiYearEndTip();
+    expect(tip).toContain('"Sell and Move"');
+    expect(tip).toContain('"Finish Upgrades"');
+    short(tip);
   });
 });

@@ -25,6 +25,9 @@ export interface Focusable {
   destroy(): void;
 }
 
+export type ButtonTone = 'good' | 'warn' | 'bad';
+const TONE_MARK: Record<ButtonTone, string> = { good: '✓', warn: '–', bad: '✗' };
+
 const BORDER = 2;
 const FOCUS_BORDER = 4;
 const TEXT_PAD = 12;
@@ -40,6 +43,7 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
   private readonly labelText: Phaser.GameObjects.Text;
   private readonly detailText: Phaser.GameObjects.Text | null;
   private focused = false;
+  private tone: ButtonTone | null = null;
   nav: FocusNav | null = null;
 
   constructor(
@@ -98,6 +102,15 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
     return Boolean(this.opts.disabledReason);
   }
 
+  /**
+   * Marks the button as a right, so-so or wrong choice: a coloured fill and outline plus
+   * a ✓, – or ✗ before the label, so colour is never the only signal. `null` clears it.
+   */
+  setTone(tone: ButtonTone | null): void {
+    this.tone = tone;
+    this.refresh();
+  }
+
   setFocused(focused: boolean): void {
     this.focused = focused;
     this.refresh();
@@ -133,10 +146,15 @@ export class Button extends Phaser.GameObjects.Container implements Focusable {
   }
 
   private refresh(): void {
-    const status = this.disabled ? '✕ ' : '';
+    const status = this.tone ? `${TONE_MARK[this.tone]} ` : this.disabled ? '✕ ' : '';
     this.labelText.setText(`${status}${this.opts.label}`);
     if (this.opts.detail) this.fitLabel();
     this.labelText.setColor(this.disabled ? colours.textDisabled : colours.text);
+    if (this.tone) {
+      this.bg.setFillStyle(colours[`${this.tone}Fill`]);
+      this.bg.setStrokeStyle(FOCUS_BORDER, colours[`${this.tone}Edge`]);
+      return;
+    }
     this.bg.setFillStyle(this.disabled ? colours.buttonDisabled : colours.button);
     this.bg.setStrokeStyle(this.focused ? FOCUS_BORDER : BORDER, this.focused ? colours.focus : colours.panelEdge);
   }

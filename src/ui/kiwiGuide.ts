@@ -26,6 +26,13 @@ const ENTER_MS = 450;
 const BOB_MS = 900;
 const BOB_PX = 4;
 const DIM = 0.5;
+/** Lighter than the introduction's dim, so the buttons Kiwi points at stay easy to see. */
+const TIP_DIM = 0.3;
+const RING_PAD = 6;
+const ARROW_GAP = 6;
+const ARROW_HALF = 14;
+const ARROW_H = 22;
+const ARROW_BOB = 8;
 /** Above the map, below the HUD, so the box being explained stays bright. */
 const BLOCKER_DEPTH = 9;
 const GUIDE_DEPTH = 21;
@@ -75,12 +82,28 @@ export interface KiwiBubble {
   footerY: number;
 }
 
+/** One paragraph of a speech bubble, optionally coloured or bold. */
+export interface KiwiPart {
+  text: string;
+  colour?: string;
+  bold?: boolean;
+}
+
+export interface KiwiSayOptions {
+  heading?: string;
+  /** Small text above the heading, e.g. "2 of 8". */
+  note?: string;
+  /** Height to reserve at the bottom for buttons. */
+  footer?: number;
+  /** Bubble width, for longer text or wide buttons. */
+  width?: number;
+  /** Read out first by screen readers, but not shown. */
+  spokenContext?: string;
+}
+
 export interface Kiwi {
-  /**
-   * Shows a speech bubble above the kiwi, replacing the current one. `footer` reserves room
-   * for buttons. `spokenContext` is read out first by screen readers but not shown.
-   */
-  say(text: string, opts?: { heading?: string; note?: string; footer?: number; spokenContext?: string }): KiwiBubble;
+  /** Shows a speech bubble above the kiwi, replacing the current one: one paragraph, or several styled ones. */
+  say(content: string | KiwiPart[], opts?: KiwiSayOptions): KiwiBubble;
   destroy(): void;
 }
 
@@ -109,36 +132,42 @@ export function addKiwi(scene: Phaser.Scene, enter: boolean): Kiwi {
 
   let layer: Phaser.GameObjects.Container | null = null;
   return {
-    say(words, opts = {}) {
+    say(content, opts = {}) {
       layer?.destroy();
       layer = scene.add.container(0, 0).setDepth(GUIDE_DEPTH);
-      const inner = BUBBLE_W - PAD * 2;
-      const x = WIDTH - EDGE - BUBBLE_W;
+      const paragraphs: KiwiPart[] = typeof content === 'string' ? [{ text: content }] : content;
+      const words = paragraphs.map((p) => p.text).join(' ');
+      const w = opts.width ?? BUBBLE_W;
+      const inner = w - PAD * 2;
+      const x = WIDTH - EDGE - w;
       const parts: Phaser.GameObjects.Text[] = [];
       if (opts.note) parts.push(scene.add.text(0, 0, opts.note, { ...text.small, fontSize: '14px' }));
       if (opts.heading) parts.push(scene.add.text(0, 0, opts.heading, { ...text.h2, wordWrap: { width: inner } }));
-      parts.push(
-        scene.add.text(0, 0, words, {
-          fontFamily: FONT,
-          fontSize: '19px',
-          color: colours.text,
-          lineSpacing: 5,
-          wordWrap: { width: inner },
-        }),
-      );
+      for (const p of paragraphs) {
+        parts.push(
+          scene.add.text(0, 0, p.text, {
+            fontFamily: FONT,
+            fontSize: '19px',
+            color: p.colour ?? colours.text,
+            fontStyle: p.bold ? 'bold' : 'normal',
+            lineSpacing: 5,
+            wordWrap: { width: inner },
+          }),
+        );
+      }
       const footer = opts.footer ? PAD + opts.footer : 0;
       const h = PAD + parts.reduce((sum, t) => sum + t.height, 0) + (parts.length - 1) * LINE_GAP + footer + PAD;
       // The bubble sits above the kiwi and grows upwards; its tail points down at the kiwi's head.
       const bottom = feetY - KIWI_H - TAIL;
       const y = bottom - h;
       const g = scene.add.graphics();
-      g.fillStyle(colours.panel).fillRoundedRect(x, y, BUBBLE_W, h, RADIUS);
-      g.lineStyle(3, colours.focus).strokeRoundedRect(x, y, BUBBLE_W, h, RADIUS);
+      g.fillStyle(colours.panel).fillRoundedRect(x, y, w, h, RADIUS);
+      g.lineStyle(3, colours.focus).strokeRoundedRect(x, y, w, h, RADIUS);
       const tx = WIDTH - EDGE - KIWI_FEET_FROM_RIGHT - KIWI_HEAD_X;
       g.fillStyle(colours.panel).fillTriangle(tx - 14, bottom - 2, tx + 14, bottom - 2, tx - 4, bottom + TAIL);
       g.lineStyle(3, colours.focus).lineBetween(tx - 14, bottom, tx - 4, bottom + TAIL).lineBetween(tx - 4, bottom + TAIL, tx + 14, bottom);
       // Swallow clicks so they don't reach whatever is under the bubble.
-      const hit = scene.add.rectangle(x, y, BUBBLE_W, h, 0xffffff, 0.001).setOrigin(0).setInteractive();
+      const hit = scene.add.rectangle(x, y, w, h, 0xffffff, 0.001).setOrigin(0).setInteractive();
       layer.add([hit, g]);
       let ty = y + PAD;
       for (const t of parts) {
@@ -148,7 +177,7 @@ export function addKiwi(scene: Phaser.Scene, enter: boolean): Kiwi {
       layer.add(parts);
       const lead = opts.spokenContext ? `${opts.spokenContext.replace(/\.$/, '')}. ` : '';
       announce(`${lead}Kiwi says: ${opts.heading ? `${opts.heading} ` : ''}${words}`);
-      return { layer, x, w: BUBBLE_W, footerY: y + h - PAD - (opts.footer ?? 0) };
+      return { layer, x, w, footerY: y + h - PAD - (opts.footer ?? 0) };
     },
     destroy() {
       layer?.destroy();
@@ -217,4 +246,66 @@ export function showKiwiGuide(
   };
 
   show(0);
+}
+
+/** Something Kiwi points at: a box, or a round button (`round`). */
+export interface KiwiTarget extends BoxRect {
+  round?: boolean;
+}
+
+export interface KiwiTipOptions {
+  text: string;
+  /** What to point at: each gets a pulsing outline and a bobbing arrow above it. */
+  targets: KiwiTarget[];
+  /** Main nav to pause while Kiwi talks. */
+  nav: FocusNav;
+  /** Walk in (true), or already be standing there, e.g. straight after the year's question (false). */
+  enter: boolean;
+  onDone?: () => void;
+}
+
+/**
+ * A one-off tip: Kiwi points at some buttons and explains them in one short bubble.
+ * The screen is lightly dimmed and paused; Got it (or Escape) sends Kiwi away.
+ */
+export function showKiwiTip(scene: Phaser.Scene, opts: KiwiTipOptions): void {
+  opts.nav.enabled = false;
+  const blocker = scene.add.rectangle(0, 0, WIDTH, HEIGHT, 0x000000, TIP_DIM).setOrigin(0).setDepth(BLOCKER_DEPTH).setInteractive();
+  const kiwi = addKiwi(scene, opts.enter);
+  const pointers = scene.add.container(0, 0).setDepth(GUIDE_DEPTH);
+  const reduced = prefersReducedMotion();
+  for (const t of opts.targets) {
+    const cx = t.x + t.w / 2;
+    const ring = t.round
+      ? scene.add.circle(cx, t.y + t.h / 2, t.w / 2 + RING_PAD).setStrokeStyle(4, colours.focus)
+      : scene.add.rectangle(t.x - RING_PAD, t.y - RING_PAD, t.w + RING_PAD * 2, t.h + RING_PAD * 2).setOrigin(0).setStrokeStyle(4, colours.focus);
+    scene.tweens.add({ targets: ring, alpha: 0.25, duration: PULSE_MS, yoyo: true, repeat: -1 });
+    // A downward arrow above the target: shape and motion, not just colour.
+    const arrow = scene.add.graphics({ x: cx, y: t.y - RING_PAD - ARROW_GAP });
+    arrow.fillStyle(colours.focus).lineStyle(2, INK);
+    arrow.fillTriangle(-ARROW_HALF, -ARROW_H, ARROW_HALF, -ARROW_H, 0, 0);
+    arrow.strokeTriangle(-ARROW_HALF, -ARROW_H, ARROW_HALF, -ARROW_H, 0, 0);
+    if (!reduced) scene.tweens.add({ targets: arrow, y: arrow.y - ARROW_BOB, duration: PULSE_MS, ease: 'Sine.easeInOut', yoyo: true, repeat: -1 });
+    pointers.add([ring, arrow]);
+  }
+
+  const nav = new FocusNav(scene);
+  const finish = () => {
+    nav.destroy();
+    kiwi.destroy();
+    pointers.destroy();
+    blocker.destroy();
+    opts.nav.enabled = true;
+    opts.onDone?.();
+  };
+  nav.onCancel = finish;
+  const bubble = kiwi.say(opts.text, { footer: BTN_H });
+  const ok = new Button(scene, bubble.x + bubble.w - PAD - BTN_W, bubble.footerY, BTN_W, BTN_H, {
+    label: 'Got it',
+    fontSize: 18,
+    onActivate: finish,
+  });
+  bubble.layer.add(ok);
+  nav.add(ok);
+  nav.focus(ok);
 }
