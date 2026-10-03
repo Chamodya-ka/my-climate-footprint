@@ -2,6 +2,7 @@ import * as Phaser from 'phaser';
 import { formatMoney } from '../sim/format';
 import { getHouse } from '../sim/state';
 import { data, state, takeHudTour } from '../session';
+import { playRegionMusic } from '../ui/audio';
 import { FocusNav } from '../ui/buttons';
 import { areaHazardLine, hudIntro, regionHazardLabel } from '../ui/copy';
 import { showCoachMarks } from '../ui/coachMarks';
@@ -59,7 +60,10 @@ export class RegionSelect extends Phaser.Scene {
     fitPanel();
     const infoPanel = [bg, title, sub, info];
 
-    const select = (regionId: string) => this.scene.start('HouseSelect', { regionId });
+    const select = (regionId: string) => {
+      playRegionMusic(this.game, d.regions.find((r) => r.id === regionId)!.mapRegion);
+      this.scene.start('HouseSelect', { regionId });
+    };
     const nav = new FocusNav(this);
     const labelFor = new Map<string, RegionLabel>();
 

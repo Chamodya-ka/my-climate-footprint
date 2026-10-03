@@ -52,9 +52,10 @@ src/
               advice.ts (what helped / would have helped), format.ts, *.test.ts
   scenes/     Boot, Title, RegionSelect, HouseSelect, House (incl. the year's question), Roll, YearReview, FinalReport
   ui/         HUD, buttons (Button + FocusNav), panels, houseArt, houseAssets, copy, theme, a11y, icons, spots,
-              regionMap + mapView + mapMarkers (the valley map)
+              regionMap + mapView + mapMarkers (the valley map), audio (music + sound effects)
   data/       areas.json, houses.json, weather.json, mods.json, quiz.json, balance.json, schemas.ts, index.ts
-assets/       map (valley map art, house_and_region_assets: house sprites + zone masks + zoomed region views), sprites, audio, LICENSES.md
+assets/       map (valley map art, house_and_region_assets: house sprites + zone masks + zoomed region views), sprites, audio (source recordings; game/ holds the processed files), LICENSES.md
+tools/audio/process.sh   builds assets/audio/game/ from the source recordings (ffmpeg)
 tools/blender/house_sprites.py   (obsolete placeholder; house sprites now come from assets/map/house_and_region_assets)
 ```
 
@@ -340,6 +341,11 @@ The odds and damage values above are game-design numbers set by the team. Hazard
 - **Draw remaining effects in code**: light rain while the calendar flips, and the flipping calendar itself; disaster and repair animations come from the designer's script.
 - **Placeholder art** may use Kenney (CC0) packs.
 - Record the licence of every third-party asset in `assets/LICENSES.md`.
+- **Audio** (`src/ui/audio.ts`) plays files from `assets/audio/game/`, built by `tools/audio/process.sh` from the recordings in `assets/audio/` (silent edges trimmed, music loudness-matched, MP3 for the web). Re-run the script after replacing a recording.
+  - Music: menu music plays on the Title screen and the map until the player picks an area. Then it crossfades to that region's looping track (coastal, riverside → urban, hillysides → hills), which crossfades again if they pick a different region and keeps playing through the house and year screens (and back on the map, e.g. after selling). Returning to the Title screen brings back the menu music.
+  - Click: plays on every pointer press on the game canvas.
+  - Disasters: the Roll scene plays the flood or landslide sound when its effect starts. The landslide sound is cut to the length of the slip animation, with fades; the flood sound fades out if the player leaves the Roll screen before it ends.
+  - Fades run on the game loop, not scene tweens, so they carry on through scene changes.
 
 ## Tests that must exist in src/sim
 

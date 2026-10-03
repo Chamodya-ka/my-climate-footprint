@@ -4,6 +4,7 @@ import { getArea, getHouse, type GameState, type YearRecord } from '../sim/state
 import { data, state } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
+import { playDisasterSound } from '../ui/audio';
 import { drawCalendar, CALENDAR_H, CALENDAR_W } from '../ui/calendar';
 import { calendarYear, yearVerdict } from '../ui/copy';
 import { displayedFootprint, drawHUD } from '../ui/HUD';
@@ -111,6 +112,7 @@ export class Roll extends Phaser.Scene {
           transition ??= createHouseTransition(this, houseDef, box, region, level);
           transition.image.setDepth(-0.5); // over the static house, under the panel
           const next = Math.min(level + 1, 2) as DamageLevel;
+          playDisasterSound(this, r.disaster);
           level = await transition.play(r.disaster === 'flood' ? 'flood' : 'landslip', level, next);
         }
         await wait(SETTLE_MS);
