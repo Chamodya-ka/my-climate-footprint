@@ -20,7 +20,7 @@ export class Title extends Phaser.Scene {
       WIDTH / 2 - 380,
       270,
       760,
-      `Buy a house in a valley-and-harbour city inspired by Lower Hutt. Each year you get ` +
+      `Buy a house in a valley-and-harbour city. Each year you get ` +
         `${d.balance.actionsPerTurn} actions to prepare or repair, then the weather is rolled. ` +
         `Keep your house standing from ${d.balance.startYear} to ${lastCalendarYear(d)}.\n\n` +
         `Assume everyone makes the same everyday choices you do: together they change the carbon footprint, and a bigger footprint ` +

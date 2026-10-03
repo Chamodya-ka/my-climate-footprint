@@ -17,6 +17,11 @@ import {
   sell,
 } from './turn';
 
+/** The footprint after one year from `start`, with `delta` from the answer and mods. */
+function expectedFootprint(d: GameData, start: number, delta: number): number {
+  return Math.max(d.balance.minFootprint, start * (1 + d.balance.baseYearlyIncreasePercent / 100) + delta);
+}
+
 /** Ends the year: footprint update, weather roll and resolution. */
 function playYear(s: GameState, d: GameData = data): GameState {
   return expectOk(endTurn(s, d));
@@ -76,7 +81,9 @@ describe("the year's question", () => {
     expect(answered.thisYear.quiz?.answerId).toBe('cycle');
     const ended = playYear(answered, neverHits);
     expect(ended.history[0]!.quiz.answerId).toBe('cycle');
-    expect(ended.footprint).toBeCloseTo(data.balance.startingFootprint + data.balance.baseYearlyIncrement - 1);
+    expect(ended.footprint).toBeCloseTo(
+      expectedFootprint(data, data.balance.startingFootprint, data.balance.quizAnswers.correct.footprintDelta),
+    );
   });
 
   it('can only be answered once a year', () => {
@@ -300,37 +307,61 @@ describe('consumables', () => {
 });
 
 describe('footprint', () => {
+  const { correct, neutral, wrong } = data.balance.quizAnswers;
+
   it('adds the base increment and the quiz delta', () => {
-    const s = playYear(startedGame(FLOOD_HOUSE, neverHits), neverHits); // answered cycle: -1.0
-    expect(s.footprint).toBeCloseTo(data.balance.startingFootprint + data.balance.baseYearlyIncrement - 1);
+    const s = playYear(startedGame(FLOOD_HOUSE, neverHits), neverHits); // answered cycle: correct
+    expect(s.footprint).toBeCloseTo(expectedFootprint(data, data.balance.startingFootprint, correct.footprintDelta));
   });
 
-  it('adds active mod deltas (planting trees)', () => {
-    const s = expectOk(applyMod(startedGame(FLOOD_HOUSE, neverHits), neverHits, 'plant-trees'));
-    const after = playYear(s, neverHits);
-    const trees = data.mods.find((m) => m.id === 'plant-trees')!.footprintDelta;
-    expect(after.footprint).toBeCloseTo(
-      data.balance.startingFootprint + data.balance.baseYearlyIncrement - 1 + trees,
+  it('rises by baseYearlyIncreasePercent of the current footprint', () => {
+    const high = dataWith((d) => {
+      d.balance.startingFootprint = 10;
+      d.balance.baseYearlyIncreasePercent = 10;
+    });
+    const wrongIndex = data.quiz[0]!.answers.findIndex((a) => a.footprintDelta === wrong.footprintDelta);
+    const s = playYear(startedGame(FLOOD_HOUSE, high, 1, wrongIndex), high);
+    expect(s.history[0]!.baseIncrement).toBeCloseTo(1);
+    expect(s.footprint).toBeCloseTo(10 + 1 + wrong.footprintDelta);
+  });
+
+  it('every question has one correct, one neutral and two wrong answers', () => {
+    for (const q of data.quiz) {
+      const deltas = q.answers.map((a) => a.footprintDelta).sort((a, b) => a - b);
+      expect(deltas).toEqual([correct.footprintDelta, neutral.footprintDelta, wrong.footprintDelta, wrong.footprintDelta]);
+    }
+  });
+
+  it('adds active mod deltas', () => {
+    const withTrees = dataWith((d) => {
+      d.mods.find((m) => m.id === 'plant-trees')!.footprintDelta = -0.2;
+      d.balance.startingFootprint = 9; // well above the floor, so the sum isn't clamped
+    });
+    const s = expectOk(applyMod(startedGame(FLOOD_HOUSE, withTrees), withTrees, 'plant-trees'));
+    expect(playYear(s, withTrees).footprint).toBeCloseTo(
+      expectedFootprint(withTrees, withTrees.balance.startingFootprint, correct.footprintDelta - 0.2),
     );
   });
 
-  it('never goes below 0', () => {
-    const low = dataWith((d) => {
-      d.balance.startingFootprint = 0;
-      d.balance.baseYearlyIncrement = 0;
-    });
-    expect(playYear(startedGame(FLOOD_HOUSE, low), low).footprint).toBe(0);
+  it('planting trees has no effect on the footprint', () => {
+    expect(data.mods.find((m) => m.id === 'plant-trees')!.footprintDelta).toBe(0);
+  });
+
+  it('never goes below balance.minFootprint', () => {
+    const low = dataWith((d) => (d.balance.baseYearlyIncreasePercent = 0));
+    expect(playYear(startedGame(FLOOD_HOUSE, low), low).footprint).toBe(data.balance.minFootprint);
   });
 
   it('odds use the updated value', () => {
-    // Start just below the 8 t band; the year's increase must push the roll into the 30% band.
+    // Start just below the 8.5 t band; the year's rise must push the roll into the 35% band.
     const edge = dataWith((d) => {
-      d.balance.startingFootprint = 7.5;
-      d.balance.baseYearlyIncrement = 0.5;
+      d.balance.startingFootprint = 8.25;
+      d.balance.baseYearlyIncreasePercent = 4; // +0.33 t, so 8.58 t
     });
-    const s = playYear(startedGame(FLOOD_HOUSE, edge, 1, 3), edge); // answered carpool: 0
-    expect(s.footprint).toBe(8);
-    expect(s.history[0]!.results[0]!.chancePercent).toBe(30);
+    const neutralIndex = data.quiz[0]!.answers.findIndex((a) => a.footprintDelta === neutral.footprintDelta);
+    const s = playYear(startedGame(FLOOD_HOUSE, edge, 1, neutralIndex), edge);
+    expect(s.footprint).toBeCloseTo(8.58);
+    expect(s.history[0]!.results[0]!.chancePercent).toBe(35);
   });
 });
 

@@ -104,8 +104,8 @@
       "type": "permanent",
       "cost": 3000,
       "reductions": { "landslide": 10 },
-      "footprintDelta": -0.2,
-      "blurb": "Deep roots bind the soil, and growing trees take in carbon.",
+      "footprintDelta": 0,
+      "blurb": "Deep roots bind the soil and help hold the slope together.",
       "source": "placeholder"
     },
     {

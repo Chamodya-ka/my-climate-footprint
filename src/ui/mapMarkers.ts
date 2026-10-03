@@ -5,7 +5,7 @@ import { colours, FONT } from './theme';
 
 const FOCUS_SCALE = 1.08;
 const INK = '#26344a';
-const INK_DIM = '#5a697d';
+const INK_DIM = '#3a4757';
 
 /** A colour as Phaser wants it, from an [r, g, b] triple. */
 export const rgbToNumber = ([r, g, b]: [number, number, number]) => (r << 16) | (g << 8) | b;

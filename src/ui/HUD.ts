@@ -45,7 +45,7 @@ function box(
   const w = Math.max(MIN_W, PAD + ICON_SIZE + ICON_GAP + textW + PAD);
   const x = align === 'left' ? EDGE : WIDTH - EDGE - w;
 
-  const bg = scene.add.rectangle(x, EDGE, w, 10, colours.panel, 0.92).setOrigin(0).setStrokeStyle(2, colours.panelEdge);
+  const bg = scene.add.rectangle(x, EDGE, w, 10, colours.panel).setOrigin(0).setStrokeStyle(2, colours.panelEdge);
   c.add(bg);
   let y = EDGE + PAD - 2;
   items.forEach((it, i) => {
@@ -140,9 +140,11 @@ function footprintGauge(
   data: GameData,
   footprint: number,
   rowRects: Partial<Record<HudRowKey, BoxRect>>,
-): { rect: BoxRect; arrow: Phaser.GameObjects.Graphics } {
+): { rect: BoxRect; arrow: Phaser.GameObjects.Graphics; marker: Phaser.GameObjects.Graphics; markerX: (t: number) => number } {
   const bands = data.weather.bands;
-  const max = bands[bands.length - 1]!.max;
+  const min = data.balance.minFootprint;
+  const max = data.balance.footprintGaugeMax;
+  const at = (t: number) => textX + ((Phaser.Math.Clamp(t, min, max) - min) / (max - min)) * GAUGE_W;
   const x = EDGE;
   const textX = x + PAD + ICON_SIZE + ICON_GAP;
   const label = scene.add.text(textX, EDGE + PAD - 2, 'CARBON FOOTPRINT', {
@@ -154,7 +156,7 @@ function footprintGauge(
   const w = Math.max(MIN_W, textX - x + Math.max(label.width, GAUGE_W + ARROW_GAP + ARROW_W) + PAD);
   const h = barY + GAUGE_H - EDGE + PAD;
 
-  const bg = scene.add.rectangle(x, EDGE, w, h, colours.panel, 0.92).setOrigin(0).setStrokeStyle(2, colours.panelEdge);
+  const bg = scene.add.rectangle(x, EDGE, w, h, colours.panel).setOrigin(0).setStrokeStyle(2, colours.panelEdge);
   const g = scene.add.graphics();
   const SLICE = 2;
   for (let i = 0; i < GAUGE_W; i += SLICE) {
@@ -162,43 +164,95 @@ function footprintGauge(
   }
   g.lineStyle(2, colours.bg, 0.6);
   for (const band of bands.slice(1)) {
-    const tx = textX + (band.min / max) * GAUGE_W;
+    const tx = at(band.min);
     g.lineBetween(tx, barY + 3, tx, barY + GAUGE_H - 3);
   }
   g.lineStyle(1, colours.panelEdge).strokeRect(textX, barY, GAUGE_W, GAUGE_H);
 
-  // The marker: a pointer above the bar and a line through it.
-  const mx = textX + (Phaser.Math.Clamp(footprint, 0, max) / max) * GAUGE_W;
-  g.fillStyle(0xffffff).lineStyle(2, colours.bg);
-  g.fillTriangle(mx - MARKER, barY - MARKER - 1, mx + MARKER, barY - MARKER - 1, mx, barY + 1);
-  g.strokeTriangle(mx - MARKER, barY - MARKER - 1, mx + MARKER, barY - MARKER - 1, mx, barY + 1);
-  g.lineStyle(4, colours.bg).lineBetween(mx, barY, mx, barY + GAUGE_H);
-  g.lineStyle(2, 0xffffff).lineBetween(mx, barY, mx, barY + GAUGE_H);
+  // The marker: a pointer above the bar and a line through it. Its own object, drawn around
+  // x = 0, so it can slide along the bar when the footprint changes.
+  const markerX = at;
+  const marker = scene.add.graphics({ x: markerX(footprint), y: barY });
+  marker.fillStyle(0xffffff).lineStyle(2, colours.bg);
+  marker.fillTriangle(-MARKER, -MARKER - 1, MARKER, -MARKER - 1, 0, 1);
+  marker.strokeTriangle(-MARKER, -MARKER - 1, MARKER, -MARKER - 1, 0, 1);
+  marker.lineStyle(4, colours.bg).lineBetween(0, 0, 0, GAUGE_H);
+  marker.lineStyle(2, 0xffffff).lineBetween(0, 0, 0, GAUGE_H);
 
   const icon = scene.add.image(x + PAD, EDGE + h / 2, 'icon-footprint').setOrigin(0, 0.5);
   const arrow = scene.add.graphics({ x: textX + GAUGE_W + ARROW_GAP + ARROW_W / 2, y: barY + GAUGE_H / 2 }).setVisible(false);
-  c.add([bg, icon, label, g, arrow]);
+  c.add([bg, icon, label, g, marker, arrow]);
 
   rowRects.footprint = { x: x + PAD / 2, y: EDGE + PAD / 2, w: w - PAD, h: h - PAD };
-  return { rect: { x, y: EDGE, w, h }, arrow };
+  return { rect: { x, y: EDGE, w, h }, arrow, marker, markerX };
 }
 
-export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState): Hud {
+/**
+ * The footprint the gauge shows. Once this year's question is answered, the marker
+ * already includes the answer's change, so it moves the moment the player answers. The
+ * sim applies the answer (with the yearly rise and any mod effects) when the year ends;
+ * the Roll screen then slides the marker the rest of the way.
+ */
+export function displayedFootprint(data: GameData, state: GameState): number {
+  const answered = state.phase === 'action' && state.thisYear.quiz;
+  return answered ? previewFootprint(data, state.footprint, state.thisYear.quiz!.footprintDelta) : state.footprint;
+}
+
+function previewFootprint(data: GameData, footprint: number, delta: number): number {
+  return Math.max(data.balance.minFootprint, footprint + delta);
+}
+
+export interface HudOptions {
+  /**
+   * The footprint before this screen's change. When given and different, the gauge
+   * marker starts there and slides to the current value, then pulses, so the change is
+   * easy to see (a year usually moves it only 5–15 px).
+   */
+  footprintFrom?: number;
+}
+
+/** Marker slide and pulse timings. */
+const MARKER_SLIDE_MS = 1200;
+const MARKER_DELAY_MS = 250;
+const MARKER_PULSE_SCALE = 1.6;
+const MARKER_PULSE_MS = 220;
+
+export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState, options: HudOptions = {}): Hud {
   const c = scene.add.container(0, 0).setDepth(10);
   const house = state.house;
 
   const rows: Partial<Record<HudRowKey, BoxRect>> = {};
-  const gauge = footprintGauge(scene, c, data, state.footprint, rows);
+  const shownFootprint = displayedFootprint(data, state);
+  const gauge = footprintGauge(scene, c, data, shownFootprint, rows);
   const footprintBox = gauge.rect;
+
+  /** Slides the marker from `fromT` to `toT` tonnes, then pulses it so the move is noticed. */
+  const slideMarker = (fromT: number, toT: number) => {
+    if (fromT === toT) return;
+    gauge.marker.x = gauge.markerX(fromT);
+    scene.tweens.add({
+      targets: gauge.marker,
+      x: gauge.markerX(toT),
+      delay: MARKER_DELAY_MS,
+      duration: MARKER_SLIDE_MS,
+      ease: 'Sine.easeInOut',
+      onComplete: () =>
+        scene.tweens.add({ targets: gauge.marker, scale: MARKER_PULSE_SCALE, duration: MARKER_PULSE_MS, yoyo: true, repeat: 1 }),
+    });
+  };
+  if (options.footprintFrom !== undefined) slideMarker(options.footprintFrom, shownFootprint);
+
   const showFootprintChange = (delta: number, animate = true) => {
     drawChangeArrow(gauge.arrow, delta);
     gauge.arrow.setVisible(true);
     if (animate) {
       gauge.arrow.setScale(0);
       scene.tweens.add({ targets: gauge.arrow, scale: 1, duration: 350, ease: 'Back.easeOut' });
+      // The answer moves the marker straight away (preview; the sim applies it at year end).
+      slideMarker(state.footprint, previewFootprint(data, state.footprint, delta));
     }
   };
-  // Answered but not yet applied: the footprint moves when the year ends.
+  // Answered this year: keep showing the answer's arrow and its effect on the marker.
   if (state.phase === 'action' && state.thisYear.quiz) showFootprintChange(state.thisYear.quiz.footprintDelta, false);
 
   // The calendar year: big white text at the top centre, outlined so it reads over the sky.

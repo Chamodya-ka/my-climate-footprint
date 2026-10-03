@@ -4,9 +4,9 @@ export function formatMoney(dollars: number): string {
   return `${sign}$${Math.round(Math.abs(dollars)).toLocaleString('en-NZ')}`;
 }
 
-/** Formats tonnes of carbon to one decimal place, e.g. 6.5 t. */
+/** Formats tonnes of carbon to at least one and at most two decimal places, e.g. 8.0 t, 8.25 t. */
 export function formatTonnes(tonnes: number): string {
-  return `${tonnes.toFixed(1)} t`;
+  return `${tonnes.toFixed(Number.isInteger(tonnes * 10) ? 1 : 2)} t`;
 }
 
 export function formatSigned(n: number): string {

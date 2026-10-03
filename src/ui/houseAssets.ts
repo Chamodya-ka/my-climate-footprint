@@ -1,9 +1,9 @@
 import * as Phaser from 'phaser';
 import { z } from 'zod';
 import { SPOTS, type GameData, type House, type Spot } from '../data/schemas';
-import assetHouses from '../../assets/map/house_and_region_assets/houses.json';
 import rawZoomData from '../../assets/map/house_and_region_assets/zoom_data.json';
-import rawDisasterHouses from '../../assets/map/disaster_assets/houses.json';
+// The few fields the game needs from the asset packs' houses.json files (see houseArt.test.ts).
+import rawHouseArt from '../data/houseArt.json';
 import repairIconUrl from '../../assets/map/disaster_assets/animation/repair_icon.png';
 import { regionAtMap } from './regionMap';
 
@@ -84,13 +84,15 @@ export type ZoomPin = z.infer<typeof pinSchema>;
 export type ZoomData = z.infer<typeof zoomSchema>;
 
 const point = z.tuple([z.number(), z.number()]);
-const disasterHousesSchema = z.object({
+const houseArtSchema = z.object({
+  zoneColours: z.record(z.string(), z.tuple([z.number().int(), z.number().int(), z.number().int()])),
+  source: z.string(),
   houses: z.array(
     z.object({
       id: z.string(),
       /** "+" positions per zone, in the 600×450 design units of the house SVGs (sprite pixels ÷ 2). */
       plus: z.object({ roof: point, door: point, foundation: point, garden: point }),
-      damage: z.object({ kind: z.enum(['flood', 'landslip']) }),
+      kind: z.enum(['flood', 'landslip']),
       /** Landslip only: the ground surface the mud follows, on the 1600×1000 stage. */
       slipPath: z.array(point).optional(),
     }),
@@ -132,6 +134,17 @@ const ZONE_KEYS = [...SPOTS, 'roof'] as const;
 const MIN_ALPHA = 128;
 
 let zoomData: ZoomData | null = null;
+
+let parsedHouseArt: z.infer<typeof houseArtSchema> | null = null;
+/** src/data/houseArt.json, validated on first use (fails loudly). */
+function houseArt(): z.infer<typeof houseArtSchema> {
+  if (!parsedHouseArt) {
+    const parsed = houseArtSchema.safeParse(rawHouseArt);
+    if (!parsed.success) throw new Error(`src/data/houseArt.json is invalid: ${parsed.error.message}`);
+    parsedHouseArt = parsed.data;
+  }
+  return parsedHouseArt;
+}
 const zonesBySprite = new Map<string, HouseZones>();
 const artBySprite = new Map<string, HouseArt>();
 
@@ -193,9 +206,9 @@ function measure(scene: Phaser.Scene, sprite: string): HouseZones {
   ctx.drawImage(img, 0, 0);
   const px = ctx.getImageData(0, 0, width, height).data;
 
-  const colours = (assetHouses as { zones: Record<string, { maskColor: number[] }> }).zones;
+  const colours = houseArt().zoneColours;
   const targets = [
-    ...ZONE_KEYS.map((k) => ({ key: k as string, rgb: colours[k]!.maskColor })),
+    ...ZONE_KEYS.map((k) => ({ key: k as string, rgb: colours[k]! as number[] })),
     { key: 'wall', rgb: [0, 0, 0] },
   ];
   const acc = new Map(targets.map((t) => [t.key, { x0: width, y0: height, x1: -1, y1: -1, sx: 0, sy: 0, n: 0 }]));
@@ -250,8 +263,7 @@ export function buildHouseAssets(scene: Phaser.Scene, data: GameData): void {
     if (!scene.textures.exists(zoomKey(region.mapRegion))) problems.push(`missing zoom/zoom_${region.mapRegion}_clean.png`);
   }
 
-  const disaster = disasterHousesSchema.safeParse(rawDisasterHouses);
-  if (!disaster.success) throw new Error(`disaster_assets/houses.json is invalid: ${disaster.error.message}`);
+  const disaster = { data: houseArt() };
 
   for (const mod of data.mods) {
     if (!scene.textures.exists(modIconKey(mod.icon))) problems.push(`mods.json: "${mod.id}" has no mod_icons/png/${mod.icon}_128.png`);
@@ -263,13 +275,13 @@ export function buildHouseAssets(scene: Phaser.Scene, data: GameData): void {
     const art = disaster.data.houses.find((h) => h.id === house.sprite);
     const disasters = data.areas.find((a) => a.id === house.areaId)?.disasters ?? [];
     if (!art) {
-      problems.push(`disaster_assets/houses.json has no entry for "${house.sprite}"`);
+      problems.push(`src/data/houseArt.json has no entry for "${house.sprite}"`);
     } else {
       const expected = disasters.includes('landslide') ? 'landslip' : 'flood';
-      if (art.damage.kind !== expected) problems.push(`"${house.sprite}" damage art is for a ${art.damage.kind}, but its area has ${disasters.join(', ')}`);
-      if (art.damage.kind === 'landslip' && !art.slipPath?.length) problems.push(`"${house.sprite}" is a landslip house with no slipPath`);
+      if (art.kind !== expected) problems.push(`"${house.sprite}" damage art is for a ${art.kind}, but its area has ${disasters.join(', ')}`);
+      if (art.kind === 'landslip' && !art.slipPath?.length) problems.push(`"${house.sprite}" is a landslip house with no slipPath`);
       const hasForeground = scene.textures.exists(backgroundKey(house.sprite, 'post_fg'));
-      if (art.damage.kind === 'flood' && !hasForeground) problems.push(`missing backgrounds/${house.sprite}_post_fg.png`);
+      if (art.kind === 'flood' && !hasForeground) problems.push(`missing backgrounds/${house.sprite}_post_fg.png`);
       for (const level of [1, 2] as const) {
         if (!scene.textures.exists(spriteKey(house.sprite, level))) problems.push(`missing sprites/${house.sprite}_dmg${level}.png`);
       }
@@ -278,7 +290,7 @@ export function buildHouseAssets(scene: Phaser.Scene, data: GameData): void {
       }
       const toSprite = ([x, y]: [number, number]) => ({ x: x * PLUS_SCALE, y: y * PLUS_SCALE });
       artBySprite.set(house.sprite, {
-        kind: art.damage.kind,
+        kind: art.kind,
         plus: {
           roof: toSprite(art.plus.roof),
           door: toSprite(art.plus.door),

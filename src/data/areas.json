@@ -1,54 +1,86 @@
 {
   "regions": [
-    { "id": "coastal", "name": "Coastal", "mapRegion": "coastal", "blurb": "Flat land by the harbour and the open coast." },
-    { "id": "urban", "name": "Urban", "mapRegion": "riverside", "blurb": "The valley floor and the busy city centre." },
-    { "id": "hills", "name": "Hills", "mapRegion": "hillysides", "blurb": "Quiet streets on the slopes above the valley." }
+    {
+      "id": "coastal",
+      "name": "Coastal",
+      "mapRegion": "coastal",
+      "blurb": "Flat land by the harbour and the open coast."
+    },
+    {
+      "id": "urban",
+      "name": "Urban",
+      "mapRegion": "riverside",
+      "blurb": "The valley floor and the busy city centre."
+    },
+    {
+      "id": "hills",
+      "name": "Hills",
+      "mapRegion": "hillysides",
+      "blurb": "Quiet streets on the slopes above the valley."
+    }
   ],
   "areas": [
     {
       "id": "shoreline-flats",
       "regionId": "coastal",
       "name": "Shoreline Flats",
-      "inspiredBy": "Petone",
-      "disasters": ["flood"],
-      "floodCauses": ["storm surge", "big swells", "surface water that can't drain away"],
-      "source": "Hutt City Council District Plan natural hazard overlays; Greater Wellington Regional Council flood hazard maps"
+      "disasters": [
+        "flood"
+      ],
+      "floodCauses": [
+        "storm surge",
+        "big swells",
+        "surface water that can't drain away"
+      ],
+      "source": "Regional flood hazard maps and district plan natural hazard overlays (see CLAUDE.md, Hazard data sources)"
     },
     {
       "id": "harbour-bays",
       "regionId": "coastal",
       "name": "Harbour Bays",
-      "inspiredBy": "Eastbourne",
-      "disasters": ["flood"],
-      "floodCauses": ["storm surge", "big swells"],
-      "source": "Hutt City Council District Plan natural hazard overlays; Greater Wellington Regional Council flood hazard maps"
+      "disasters": [
+        "flood"
+      ],
+      "floodCauses": [
+        "storm surge",
+        "big swells"
+      ],
+      "source": "Regional flood hazard maps and district plan natural hazard overlays (see CLAUDE.md, Hazard data sources)"
     },
     {
       "id": "river-valley",
       "regionId": "urban",
       "name": "River Valley",
-      "inspiredBy": "Hutt Valley",
-      "disasters": ["flood"],
-      "floodCauses": ["the river bursting its banks", "surface water that can't drain away"],
-      "source": "Greater Wellington Regional Council flood hazard maps"
+      "disasters": [
+        "flood"
+      ],
+      "floodCauses": [
+        "the river bursting its banks",
+        "surface water that can't drain away"
+      ],
+      "source": "Regional flood hazard maps and district plan natural hazard overlays (see CLAUDE.md, Hazard data sources)"
     },
     {
       "id": "city-centre",
       "regionId": "urban",
       "name": "Town Centre",
-      "inspiredBy": "Hutt CBD",
-      "disasters": ["flood"],
-      "floodCauses": ["surface water overwhelming the stormwater drains"],
-      "source": "Hutt City Council District Plan natural hazard overlays"
+      "disasters": [
+        "flood"
+      ],
+      "floodCauses": [
+        "surface water overwhelming the stormwater drains"
+      ],
+      "source": "Regional flood hazard maps and district plan natural hazard overlays (see CLAUDE.md, Hazard data sources)"
     },
     {
       "id": "ridge-hillside",
       "regionId": "hills",
       "name": "Ridgeside",
-      "inspiredBy": "Wainuiomata",
-      "disasters": ["landslide"],
+      "disasters": [
+        "landslide"
+      ],
       "floodCauses": [],
-      "source": "Earth Sciences New Zealand landslide data; Hutt City Council District Plan natural hazard overlays"
+      "source": "National landslide data and district plan natural hazard overlays (see CLAUDE.md, Hazard data sources)"
     }
   ]
 }

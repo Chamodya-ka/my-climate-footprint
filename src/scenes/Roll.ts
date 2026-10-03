@@ -6,7 +6,7 @@ import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
 import { drawCalendar, CALENDAR_H, CALENDAR_W } from '../ui/calendar';
 import { calendarYear, yearVerdict } from '../ui/copy';
-import { drawHUD } from '../ui/HUD';
+import { displayedFootprint, drawHUD } from '../ui/HUD';
 import { drawHouseScene, FULL_SCREEN_ART, houseDamageLevel, type ArtBox } from '../ui/houseArt';
 import type { DamageLevel } from '../ui/houseAssets';
 import { createHouseTransition, type HouseTransition } from '../ui/houseTransitions';
@@ -59,9 +59,10 @@ export class Roll extends Phaser.Scene {
     ui.add(heading);
     // Income arrives at the start of next year, so there's none after the last year or a lost house.
     if (!s.outcome) {
-      // The bank icon with the year's income, e.g. "+$50,000".
+      // "You have earned" over the bank icon with the year's income, e.g. "+$50,000".
       const income = d.balance.yearlyIncome;
-      const rowY = heading.y + heading.height + 34;
+      const earned = this.add.text(EDGE + 16, heading.y + heading.height + 6, 'You have earned', text.body);
+      const rowY = earned.y + earned.height + 32;
       const icon = this.add.image(EDGE + 16, rowY, 'icon-bank').setOrigin(0, 0.5).setScale(INCOME_ICON_SCALE);
       const amount = this.add
         .text(icon.x + icon.displayWidth + 12, rowY, `+${formatMoney(income)}`, {
@@ -70,8 +71,8 @@ export class Roll extends Phaser.Scene {
           color: colours.good,
         })
         .setOrigin(0, 0.5);
-      ui.add([icon, amount]);
-      announce(`One year goes by. Bank +${formatMoney(income)}.`);
+      ui.add([earned, icon, amount]);
+      announce(`One year goes by. You have earned +${formatMoney(income)}.`);
     }
 
     const anyHit = rec.results.some((r) => r.hit);
@@ -116,7 +117,9 @@ export class Roll extends Phaser.Scene {
 
         // Reveal the resolved state: HUD, and the house with its upgrades and damage.
         hud.destroy();
-        hud = drawHUD(this, d, s);
+        // The year's footprint change (the yearly rise and any mod effects on top of the answer's
+        // change, which the gauge already shows): slide the marker the rest of the way.
+        hud = drawHUD(this, d, s, { footprintFrom: displayedFootprint(d, shown) });
         art.destroy();
         art = drawHouseScene(this, d, houseDef, s.house, box).setDepth(-1);
         transition?.destroy();

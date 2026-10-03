@@ -7,20 +7,14 @@
         {
           "id": "cycle",
           "label": "Cycle",
-          "footprintDelta": -1.0,
+          "footprintDelta": -0.25,
           "explanation": "No fuel at all, and it keeps you fit. The lowest-carbon way to get to work."
         },
         {
-          "id": "train",
-          "label": "Take the train",
-          "footprintDelta": -0.5,
-          "explanation": "One train carries hundreds of people, so each trip uses far less fuel than driving alone."
-        },
-        {
-          "id": "bus",
-          "label": "Take the bus",
-          "footprintDelta": -0.5,
-          "explanation": "Sharing one vehicle with many passengers cuts fuel use per person a lot."
+          "id": "drive",
+          "label": "Drive",
+          "footprintDelta": 0.5,
+          "explanation": "Driving alone burns the most fuel per person of any option here."
         },
         {
           "id": "carpool",
@@ -29,10 +23,10 @@
           "explanation": "Sharing a car halves each person's emissions, but it still burns petrol every day."
         },
         {
-          "id": "drive",
-          "label": "Drive",
-          "footprintDelta": 1.0,
-          "explanation": "Driving alone burns the most fuel per person of any option here."
+          "id": "taxi",
+          "label": "Take a taxi each day",
+          "footprintDelta": 0.5,
+          "explanation": "A taxi burns as much fuel as driving yourself, plus the empty trips between fares."
         }
       ],
       "source": "placeholder"
@@ -42,28 +36,28 @@
       "prompt": "Your power plan is up for renewal. What do you pick?",
       "answers": [
         {
-          "id": "renewable",
-          "label": "A 100% renewable plan",
-          "footprintDelta": -1.0,
-          "explanation": "Power from wind, sun and water instead of burning gas or coal."
-        },
-        {
-          "id": "efficient",
-          "label": "Same plan, but switch to LED bulbs",
-          "footprintDelta": -0.5,
-          "explanation": "LED bulbs use much less electricity, but the power itself doesn't get any cleaner."
-        },
-        {
           "id": "same",
           "label": "Keep things as they are",
           "footprintDelta": 0.0,
           "explanation": "Nothing changes, so neither does the carbon footprint."
         },
         {
+          "id": "renewable",
+          "label": "A 100% renewable plan",
+          "footprintDelta": -0.25,
+          "explanation": "Power from wind, sun and water instead of burning gas or coal."
+        },
+        {
           "id": "gas-heater",
           "label": "Add a gas patio heater",
-          "footprintDelta": 1.0,
+          "footprintDelta": 0.5,
           "explanation": "Heating outdoor air with gas burns fuel for very little warmth."
+        },
+        {
+          "id": "spa",
+          "label": "Install a gas-heated spa pool",
+          "footprintDelta": 0.5,
+          "explanation": "Keeping a spa pool hot with gas burns fuel all year round."
         }
       ],
       "source": "placeholder"
@@ -73,10 +67,10 @@
       "prompt": "Planning the week's meals. What's on the menu?",
       "answers": [
         {
-          "id": "local-veg",
-          "label": "Mostly local vegetables",
-          "footprintDelta": -0.5,
-          "explanation": "Vegetables take far less land, water and energy to grow than meat, and local food travels less."
+          "id": "red-meat",
+          "label": "Red meat most nights",
+          "footprintDelta": 0.5,
+          "explanation": "Beef and lamb produce a lot of methane and need far more land and feed than other foods."
         },
         {
           "id": "mixed",
@@ -85,10 +79,16 @@
           "explanation": "A balanced plate, but the meat still adds to the footprint."
         },
         {
-          "id": "red-meat",
-          "label": "Red meat most nights",
-          "footprintDelta": 1.0,
-          "explanation": "Beef and lamb produce a lot of methane and need far more land and feed than other foods."
+          "id": "imported",
+          "label": "Mostly imported, air-freighted treats",
+          "footprintDelta": 0.5,
+          "explanation": "Food flown in from overseas burns a lot of fuel to reach your plate."
+        },
+        {
+          "id": "local-veg",
+          "label": "Mostly local vegetables",
+          "footprintDelta": -0.25,
+          "explanation": "Vegetables take far less land, water and energy to grow than meat, and local food travels less."
         }
       ],
       "source": "placeholder"
@@ -100,19 +100,25 @@
         {
           "id": "staycation",
           "label": "Explore the local bush tracks",
-          "footprintDelta": -0.5,
+          "footprintDelta": -0.25,
           "explanation": "Exploring close to home uses little fuel and keeps money in the local area."
         },
         {
+          "id": "train-trip",
+          "label": "A train trip to the next town",
+          "footprintDelta": 0.0,
+          "explanation": "Trains are an efficient way to travel, though the trip still uses some energy."
+        },
+        {
           "id": "road-trip",
-          "label": "A road trip up the North Island",
+          "label": "A long road trip around the country",
           "footprintDelta": 0.5,
-          "explanation": "Long drives burn plenty of petrol, though much less than flying overseas."
+          "explanation": "Long drives burn plenty of petrol."
         },
         {
           "id": "long-haul",
           "label": "A long-haul flight overseas",
-          "footprintDelta": 1.5,
+          "footprintDelta": 0.5,
           "explanation": "Flying long distances burns a huge amount of fuel; one trip can outweigh a year of driving."
         }
       ],
@@ -122,12 +128,6 @@
       "id": "waste-1",
       "prompt": "The council offers a free compost bin. Do you take it?",
       "answers": [
-        {
-          "id": "compost",
-          "label": "Yes, and start composting",
-          "footprintDelta": -0.5,
-          "explanation": "Food scraps in landfill rot into methane. Composting turns them into soil instead."
-        },
         {
           "id": "maybe",
           "label": "Take it, but rarely use it",
@@ -139,6 +139,18 @@
           "label": "No thanks, it all goes in the bin",
           "footprintDelta": 0.5,
           "explanation": "Food waste in landfill breaks down without air and releases methane, a strong greenhouse gas."
+        },
+        {
+          "id": "compost",
+          "label": "Yes, and start composting",
+          "footprintDelta": -0.25,
+          "explanation": "Food scraps in landfill rot into methane. Composting turns them into soil instead."
+        },
+        {
+          "id": "burn",
+          "label": "No thanks, I burn my garden waste",
+          "footprintDelta": 0.5,
+          "explanation": "Burning green waste releases its carbon straight into the air, along with smoke."
         }
       ],
       "source": "placeholder"
@@ -148,28 +160,28 @@
       "prompt": "Your old car needs replacing. What do you buy?",
       "answers": [
         {
+          "id": "ute",
+          "label": "A big petrol ute",
+          "footprintDelta": 0.5,
+          "explanation": "Big petrol vehicles burn the most fuel every kilometre."
+        },
+        {
           "id": "ebike",
           "label": "An e-bike instead",
-          "footprintDelta": -1.0,
+          "footprintDelta": -0.25,
           "explanation": "An e-bike uses a tiny amount of electricity and replaces many short car trips."
         },
         {
-          "id": "ev",
-          "label": "An electric car",
-          "footprintDelta": -0.5,
-          "explanation": "Electric cars run on our mostly renewable electricity instead of petrol."
+          "id": "suv",
+          "label": "A large petrol SUV",
+          "footprintDelta": 0.5,
+          "explanation": "A heavy petrol SUV burns far more fuel than a small car."
         },
         {
           "id": "hybrid",
           "label": "A hybrid",
           "footprintDelta": 0.0,
           "explanation": "A hybrid uses less petrol than a regular car, but still burns it."
-        },
-        {
-          "id": "ute",
-          "label": "A big petrol ute",
-          "footprintDelta": 1.5,
-          "explanation": "Big petrol vehicles burn the most fuel every kilometre."
         }
       ],
       "source": "placeholder"
@@ -179,22 +191,28 @@
       "prompt": "Winter is coming. How will you keep the house warm?",
       "answers": [
         {
-          "id": "insulate",
-          "label": "Insulate and use a heat pump",
-          "footprintDelta": -1.0,
-          "explanation": "Insulation keeps the heat in, so an efficient heat pump has far less work to do."
-        },
-        {
           "id": "heat-pump",
           "label": "Just a heat pump",
-          "footprintDelta": -0.5,
+          "footprintDelta": 0.0,
           "explanation": "Heat pumps are very efficient, but an uninsulated house lets much of the heat escape."
+        },
+        {
+          "id": "insulate",
+          "label": "Insulate and use a heat pump",
+          "footprintDelta": -0.25,
+          "explanation": "Insulation keeps the heat in, so an efficient heat pump has far less work to do."
         },
         {
           "id": "gas",
           "label": "Gas heater on all day",
-          "footprintDelta": 1.0,
+          "footprintDelta": 0.5,
           "explanation": "Burning gas all day releases carbon dioxide the whole time it's on."
+        },
+        {
+          "id": "coal",
+          "label": "An open coal fire",
+          "footprintDelta": 0.5,
+          "explanation": "Coal is one of the most carbon-heavy fuels, and open fires send much of the heat up the chimney."
         }
       ],
       "source": "placeholder"
@@ -204,10 +222,10 @@
       "prompt": "Your phone still works, but a new model is out. What do you do?",
       "answers": [
         {
-          "id": "keep",
-          "label": "Keep using it",
-          "footprintDelta": -0.5,
-          "explanation": "Most of a phone's footprint comes from making it, so using it longer is the cleanest option."
+          "id": "upgrade",
+          "label": "Upgrade to the newest model",
+          "footprintDelta": 0.5,
+          "explanation": "Making a new phone uses lots of energy and materials, even when the old one still works."
         },
         {
           "id": "refurb",
@@ -216,10 +234,16 @@
           "explanation": "Reusing a phone avoids most of the cost of making a new one, but still adds a little."
         },
         {
-          "id": "upgrade",
-          "label": "Upgrade to the newest model",
+          "id": "keep",
+          "label": "Keep using it",
+          "footprintDelta": -0.25,
+          "explanation": "Most of a phone's footprint comes from making it, so using it longer is the cleanest option."
+        },
+        {
+          "id": "two-phones",
+          "label": "Buy the new one and keep the old as a spare",
           "footprintDelta": 0.5,
-          "explanation": "Making a new phone uses lots of energy and materials, even when the old one still works."
+          "explanation": "A second phone means making a new one while the old one sits in a drawer."
         }
       ],
       "source": "placeholder"
@@ -229,22 +253,28 @@
       "prompt": "Neighbours are organising a weekend tree-planting day. Do you join?",
       "answers": [
         {
-          "id": "organise",
-          "label": "Join and bring friends",
-          "footprintDelta": -1.0,
-          "explanation": "More hands means more trees, and trees take in carbon as they grow."
-        },
-        {
           "id": "join",
-          "label": "Join for the morning",
-          "footprintDelta": -0.5,
-          "explanation": "Every tree planted helps take in carbon and hold soil on the slopes."
+          "label": "Join and bring friends",
+          "footprintDelta": -0.25,
+          "explanation": "More hands means more trees, and trees take in carbon as they grow."
         },
         {
           "id": "skip",
           "label": "Skip it this time",
           "footprintDelta": 0.0,
           "explanation": "No harm done, but no trees planted either."
+        },
+        {
+          "id": "drive-away",
+          "label": "Skip it and go for a long drive",
+          "footprintDelta": 0.5,
+          "explanation": "A long drive for fun burns fuel, and no trees get planted."
+        },
+        {
+          "id": "clear",
+          "label": "Clear the bush on your section instead",
+          "footprintDelta": 0.5,
+          "explanation": "Clearing plants releases the carbon they store and leaves the soil bare."
         }
       ],
       "source": "placeholder"
@@ -254,10 +284,10 @@
       "prompt": "Your work offers a work-from-home day each week. Do you take it?",
       "answers": [
         {
-          "id": "wfh",
-          "label": "Yes, and walk to the local café",
-          "footprintDelta": -0.5,
-          "explanation": "Skipping the commute one day a week saves that trip's fuel, and walking adds none."
+          "id": "no",
+          "label": "No, I'll keep driving in",
+          "footprintDelta": 0.5,
+          "explanation": "Driving in every day keeps the commute's emissions going all year."
         },
         {
           "id": "sometimes",
@@ -266,10 +296,16 @@
           "explanation": "Occasional days at home help a little, but most trips still happen."
         },
         {
-          "id": "no",
-          "label": "No, I'll keep driving in",
+          "id": "drive-lunch",
+          "label": "Yes, but drive out for lunch",
           "footprintDelta": 0.5,
-          "explanation": "Driving in every day keeps the commute's emissions as they are, and adds to them over the year."
+          "explanation": "Driving out for lunch adds a car trip, so the day at home saves little."
+        },
+        {
+          "id": "wfh",
+          "label": "Yes, and walk to the local café",
+          "footprintDelta": -0.25,
+          "explanation": "Skipping the commute one day a week saves that trip's fuel, and walking adds none."
         }
       ],
       "source": "placeholder"

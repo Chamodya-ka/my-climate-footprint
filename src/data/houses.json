@@ -11,7 +11,6 @@
       "floorArea": 110,
       "built": "1910s",
       "floorHeight": 0.5,
-      "inspiredBy": "Petone and Ohiro Bay villas",
       "blurb": "A classic weatherboard villa a short walk from the beach, on low piles.",
       "source": "placeholder"
     },
@@ -26,7 +25,6 @@
       "floorArea": 190,
       "built": "1905, restored 2022",
       "floorHeight": 0.6,
-      "inspiredBy": "Restored Petone villas",
       "blurb": "Fully restored with twin bay windows, fretwork veranda and a sea breeze.",
       "source": "placeholder"
     },
@@ -41,7 +39,6 @@
       "floorArea": 95,
       "built": "1955",
       "floorHeight": 0.4,
-      "inspiredBy": "Lower Hutt state-house era bungalows",
       "blurb": "Solid family home on a flat section, close to the river and the shops.",
       "source": "placeholder"
     },
@@ -56,7 +53,6 @@
       "floorArea": 165,
       "built": "1958, renovated 2020",
       "floorHeight": 0.3,
-      "inspiredBy": "Renovated Lower Hutt bungalows",
       "blurb": "Opened up with big sliders, a sunny deck and an internal garage.",
       "source": "placeholder"
     },
@@ -71,7 +67,6 @@
       "floorArea": 88,
       "built": "2023",
       "floorHeight": 0.2,
-      "inspiredBy": "New townhouses around Hutt Central",
       "blurb": "Low-maintenance and close to the train, but built on a slab at street level.",
       "source": "placeholder"
     },
@@ -86,7 +81,6 @@
       "floorArea": 150,
       "built": "2024",
       "floorHeight": 0.25,
-      "inspiredBy": "Modern Hutt Central townhouses",
       "blurb": "Cedar and black cladding, glass balcony and a garage at street level.",
       "source": "placeholder"
     },
@@ -101,7 +95,6 @@
       "floorArea": 100,
       "built": "1962",
       "floorHeight": 1.5,
-      "inspiredBy": "Naenae hillside homes",
       "blurb": "Valley views from a house on timber piles, with a steep section behind.",
       "source": "placeholder"
     },
@@ -116,7 +109,6 @@
       "floorArea": 210,
       "built": "2019",
       "floorHeight": 0.0,
-      "inspiredBy": "Modern homes cut into Hutt hillsides",
       "blurb": "Two levels cut into the slope, with a glass pavilion and a wide terrace.",
       "source": "placeholder"
     }

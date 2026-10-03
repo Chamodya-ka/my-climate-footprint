@@ -119,7 +119,7 @@ export function drawHouseScene(
     if (!showTags) return;
     c.add(
       scene.add
-        .text(x, y, label, { fontFamily: FONT, fontSize: '14px', color: '#10202b', backgroundColor: '#ffffffcc', padding: { x: 4, y: 2 } })
+        .text(x, y, label, { fontFamily: FONT, fontSize: '14px', color: '#10202b', backgroundColor: '#ffffff', padding: { x: 4, y: 2 } })
         .setOrigin(0.5),
     );
   };

@@ -25,7 +25,17 @@ export const balanceSchema = z.strictObject({
   /** Calendar year of game year 1, for display (e.g. 2026; with 10 years the game ends in 2035). */
   startYear: z.number().int().positive(),
   startingFootprint: z.number().nonnegative(),
-  baseYearlyIncrement: z.number(),
+  /** The footprint never goes below this (tonnes); the first weather band starts here. */
+  minFootprint: z.number().nonnegative(),
+  /** Right-hand end of the HUD's footprint gauge (tonnes); the left end is minFootprint. */
+  footprintGaugeMax: z.number().positive(),
+  /** Every question has exactly these answers: `count` of each kind, each with its footprint change. */
+  quizAnswers: z.record(
+    z.enum(['correct', 'neutral', 'wrong']),
+    z.strictObject({ footprintDelta: z.number(), count: z.number().int().positive() }),
+  ),
+  /** Each year the footprint rises by this percentage of its current value, before the answer and mods. */
+  baseYearlyIncreasePercent: z.number(),
   source,
 });
 
@@ -61,7 +71,6 @@ export const areasSchema = z.strictObject({
         id,
         regionId: id,
         name: z.string().min(1),
-        inspiredBy: z.string().min(1),
         disasters: z.array(disasterSchema).min(1),
         floodCauses: z.array(z.string().min(1)),
         source,
@@ -87,7 +96,6 @@ export const housesSchema = z.strictObject({
         built: z.string().min(1),
         /** Floor height above the ground, in metres. Shown to players; not used by the rules. */
         floorHeight: z.number().nonnegative(),
-        inspiredBy: z.string().min(1),
         blurb: z.string().min(1),
         source,
       }),
@@ -228,13 +236,40 @@ export function parseGameData(raw: RawGameData): GameData {
     if (!areaIds.has(house.areaId)) problems.push(`houses.json: house "${house.id}" has unknown area "${house.areaId}"`);
   }
 
-  // Bands must be sorted, contiguous and start at 0.
+  // Bands must be sorted, contiguous and start at the lowest possible footprint.
   weather.bands.forEach((band, i) => {
     if (band.max <= band.min) problems.push(`weather.json: band ${i} max must be above min`);
     const prev = weather.bands[i - 1];
-    if (i === 0 && band.min !== 0) problems.push('weather.json: first band must start at 0');
+    if (i === 0 && band.min !== balance.minFootprint) {
+      problems.push(`weather.json: first band must start at balance.minFootprint (${balance.minFootprint})`);
+    }
     if (prev && prev.max !== band.min) problems.push(`weather.json: band ${i} must start where band ${i - 1} ends`);
   });
+
+  if (balance.startingFootprint < balance.minFootprint) {
+    problems.push('balance.json: startingFootprint is below minFootprint');
+  }
+  if (balance.footprintGaugeMax <= balance.minFootprint) {
+    problems.push('balance.json: footprintGaugeMax must be above minFootprint');
+  }
+
+  // Each question has exactly the configured mix of correct, neutral and wrong answers.
+  const kinds = Object.entries(balance.quizAnswers);
+  for (const q of quiz.questions) {
+    const expected = kinds.reduce((sum, [, k]) => sum + k.count, 0);
+    if (q.answers.length !== expected) {
+      problems.push(`quiz.json ${q.id}: needs exactly ${expected} answers, has ${q.answers.length}`);
+    }
+    for (const [kind, k] of kinds) {
+      const n = q.answers.filter((a) => a.footprintDelta === k.footprintDelta).length;
+      if (n !== k.count) problems.push(`quiz.json ${q.id}: needs ${k.count} ${kind} answer(s) (${k.footprintDelta} t), has ${n}`);
+    }
+    for (const a of q.answers) {
+      if (!kinds.some(([, k]) => k.footprintDelta === a.footprintDelta)) {
+        problems.push(`quiz.json ${q.id}: answer "${a.id}" footprintDelta ${a.footprintDelta} isn't one of balance.quizAnswers`);
+      }
+    }
+  }
 
   if (balance.minDamagePercent > Math.min(...Object.values(weather.baseDamagePercent))) {
     problems.push('balance.json: minDamagePercent is above a base damage value');

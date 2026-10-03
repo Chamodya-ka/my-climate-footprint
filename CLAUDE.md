@@ -74,17 +74,17 @@ tools/blender/house_sprites.py   (obsolete placeholder; house sprites now come f
 
 ## World
 
-Use fictional "inspired by" area names. **Never use real street addresses.**
+Use fictional area names only. **The game must not name any real place**: no real suburbs, towns, cities, regions, councils or street addresses in game data, copy or UI (areas, houses, quiz answers, titles, `source` fields). Data `source` fields describe the kind of source and point to "Hazard data sources" below.
 
-| Region  | Area (inspired by)         | Houses (standard / luxury)                                   | Disaster  | Flood cause (copy only)     |
+| Region  | Area (in-game name)        | Houses (standard / luxury)                                   | Disaster  | Flood cause (copy only)     |
 |---------|----------------------------|--------------------------------------------------------------|-----------|-----------------------------|
-| Coastal | Coastal flats (Petone)     | Seaside villa                                                | Flood     | Storm surge, swell, surface |
-| Coastal | Bays (Eastbourne)          | Restored double-bay villa (luxury)                           | Flood     | Storm surge, swell          |
-| Urban   | Valley floor (Hutt Valley) | 1950s weatherboard bungalow / Renovated bungalow with garage | Flood     | River, surface              |
-| Urban   | City centre (Hutt CBD)     | New-build townhouse / Architect-designed townhouse           | Flood     | Surface                     |
-| Hills   | Hillside (Wainuiomata)     | Hillside weatherboard home / Glass-and-concrete hillside house | Landslide | n/a                       |
+| Coastal | Shoreline Flats            | Seaside villa                                                | Flood     | Storm surge, swell, surface |
+| Coastal | Harbour Bays               | Restored double-bay villa (luxury)                           | Flood     | Storm surge, swell          |
+| Urban   | River Valley               | 1950s weatherboard bungalow / Renovated bungalow with garage | Flood     | River, surface              |
+| Urban   | Town Centre                | New-build townhouse / Architect-designed townhouse           | Flood     | Surface                     |
+| Hills   | Ridgeside                  | Hillside weatherboard home / Glass-and-concrete hillside house | Landslide | n/a                       |
 
-Eight houses: 4 urban (map region "riverside"), 2 coastal and 2 hills (map region "hillysides"). Each has a standard and a luxury tier; `houses.json` also records bedrooms, floor area, year built and floor height (shown to players only, no rule uses it). The luxury coastal villa's `inspiredBy` says Petone, but it sits in the eastern bay on the map, so it's in the Bays area.
+Eight houses: 4 urban (map region "riverside"), 2 coastal and 2 hills (map region "hillysides"). Each has a standard and a luxury tier; `houses.json` also records bedrooms, floor area, year built and floor height (shown to players only, no rule uses it). The luxury coastal villa sits in the eastern bay on the map, so it's in Harbour Bays. The asset packs' own `houses.json` files still carry real-place `inspiredBy` notes; the game doesn't read them.
 
 The game has one flood mechanic. The "flood cause" column exists only for year-review text. It teaches that different places flood for different reasons without adding rules.
 
@@ -97,14 +97,15 @@ There are two disasters: **flood** and **landslide**.
 - Each year, the house's area disaster gets one roll.
 - Odds depend only on the **carbon footprint** (tonnes of carbon), via these bands:
 
-| Footprint band (t) | 0–4 | 4–8 | 8–12 | 12–16 | 16–20 |
-|--------------------|-----|-----|------|-------|-------|
-| Flood %            | 10  | 20  | 30   | 50    | 75    |
-| Landslide %        | 10  | 15  | 20   | 30    | 40    |
+| Footprint band (t) | 8–8.5 | 8.5–9 | 9–9.5 | 9.5–10 | 10–10.5 |
+|--------------------|-------|-------|-------|--------|---------|
+| Flood %            | 20    | 35    | 50    | 75     | 100     |
+| Landslide %        | 20    | 35    | 50    | 75     | 100     |
 
 Band rules:
-- Bands include their lower bound and exclude their upper bound: 4.0 t falls in the 4–8 band.
-- At 20 t and above, use the 16–20 values.
+- Bands include their lower bound and exclude their upper bound: 8.5 t falls in the 8.5–9 band.
+- At 10.5 t and above, use the 10–10.5 values (100%).
+- The footprint can't go below `balance.minFootprint` (8 t), so the first band starts there (checked at boot).
 
 The flipping-calendar animation is cosmetic. The outcome comes from a seeded roll against these percentages.
 
@@ -168,7 +169,7 @@ houseValue = max(0, houseValue - valueLost)
 | Store food                  | −5              | −5                  | Consumable (default)      |
 | Retaining wall              |                 | −50                 | Permanent                 |
 | Soil nailing                |                 | −20                 | Permanent                 |
-| Planting trees              |                 | −10                 | Permanent, cuts footprint |
+| Planting trees              |                 | −10                 | Permanent                 |
 | Drainage over loose soil    |                 | −5                  | Permanent                 |
 
 Rules for mods:
@@ -190,24 +191,25 @@ Rules for mods:
 The game tracks one footprint value, shown to players as the **carbon footprint**, framed as if everyone made the same choices the player does.
 
 - **Start:** `balance.startingFootprint` (tonnes).
-- **Each year:** `footprint += balance.baseYearlyIncrement + quizAnswerDelta + sum of active mod footprint deltas`.
-  - The footprint never goes below 0.
-  - Planting trees has a footprint delta. Its value is a placeholder until provided.
+- **Each year:** `footprint += footprint × balance.baseYearlyIncreasePercent / 100 + quizAnswerDelta + sum of active mod footprint deltas`.
+  - `baseYearlyIncreasePercent` is 1.2: the yearly rise compounds and is a share of the current footprint (about 0.1 t a year at 8 t).
+  - The footprint never goes below `balance.minFootprint` (8 t).
+  - No mod changes the footprint: planting trees has no effect on the disaster model (`footprintDelta: 0`; it still reduces landslide damage). The `footprintDelta` field stays on mods so a future mod could use it.
 - **Quiz format:** a "What would you do?" scenario with one answer per year, asked at the start of the year.
+- **Every question has exactly 4 answers:** 1 correct (−0.25 t), 1 neutral (0 t) and 2 wrong (+0.5 t). The kinds, counts and deltas live in `balance.quizAnswers`; each answer's `footprintDelta` in `quiz.json` must be one of them, and boot fails loudly if a question has a different mix. Vary where the correct answer sits, so it isn't always first.
 - **Question dialog** (`src/ui/questionDialog.ts`): a speech bubble that grows out of the HUD's carbon footprint box (which pulses while it's open), over the dimmed house. It can't be dismissed. Before answering it shows only the question and answers: no hint of how an answer changes the footprint. After answering, the same bubble shows short feedback (`quizFeedback()` in `src/ui/copy.ts`): ✓/✗ whether the choice was correct (correct = the lowest `footprintDelta` among the options; ties count; a wrong answer names the best one), which way it moves the carbon footprint ("Assuming everyone makes the same choice you do, the carbon footprint would go down."), and the chosen option ("▶ label") with its `explanation` from `quiz.json`. Other options aren't explained, and the feedback shows no tonne figures. At the same moment the HUD shows the change arrow. Continue closes it and unlocks the upgrades.
 
-Example entry in `quiz.json`. The deltas are placeholders until provided:
+Example entry in `quiz.json`:
 
 ```json
 {
   "id": "commute-1",
   "prompt": "Would you change your habits? How will you get to work this year?",
   "answers": [
-    { "id": "cycle",   "label": "Cycle",                "footprintDelta": -1.0 },
-    { "id": "train",   "label": "Take the train",       "footprintDelta": -0.5 },
-    { "id": "bus",     "label": "Take the bus",         "footprintDelta": -0.5 },
-    { "id": "carpool", "label": "Carpool",              "footprintDelta":  0.0 },
-    { "id": "drive",   "label": "Drive",                "footprintDelta": +1.0 }
+    { "id": "cycle",   "label": "Cycle",                "footprintDelta": -0.25, "explanation": "..." },
+    { "id": "drive",   "label": "Drive",                "footprintDelta":  0.5,  "explanation": "..." },
+    { "id": "carpool", "label": "Carpool",              "footprintDelta":  0,    "explanation": "..." },
+    { "id": "taxi",    "label": "Take a taxi each day", "footprintDelta":  0.5,  "explanation": "..." }
   ],
   "source": "placeholder"
 }
@@ -249,7 +251,7 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
   - The player can't buy back the house they just sold.
   - Only allow selling if the bank plus the sale value can afford at least one other house. Otherwise the player could end up homeless, a state the game has no rules for.
 - **HUD** (`src/ui/HUD.ts`, shown on the RegionSelect, HouseSelect, House, Roll and YearReview screens):
-  - Top left box: carbon footprint, as a gauge with no numbers: a bar from 0 to the top weather band's max (20 t), green → yellow → red, with ticks at the band edges and a white marker at the current value. To its right, once this year's question is answered and until the year ends, an arrow for the answer's change: green ▼ (lower), red ▲ (higher) or grey = (no change); shape carries the meaning, not just colour. It pops in when the answer is chosen (`hud.showFootprintChange()`).
+  - Top left box: carbon footprint, as a gauge with no numbers: a bar from `balance.minFootprint` (8 t) to `balance.footprintGaugeMax` (11 t), green → yellow → red, with ticks at the band edges and a white marker at the current value. To its right, once this year's question is answered and until the year ends, an arrow for the answer's change: green ▼ (lower), red ▲ (higher) or grey = (no change); shape carries the meaning, not just colour. It pops in when the answer is chosen (`hud.showFootprintChange()`). The white marker slides by the answer's change as soon as the answer is chosen, then pulses. The sim still applies the footprint when the year ends, so until then the gauge shows a display-only preview (`displayedFootprint()`). On the Roll screen's reveal the marker slides the rest of the way: the yearly rise plus any upgrade effects (`drawHUD(..., { footprintFrom })`). The bar is 200 px for 3 t (about 67 px per tonne). The final report's footprint chart uses the same range, stretched if the footprint goes past 11 t.
   - Top centre, no box: the calendar year (e.g. "2026") in large white text with a dark outline. Hidden in year 0 (before the first house is bought).
   - Top right box: bank, house value (current dollar value only), total repair cost (the cost to repair the house fully right now; $0 when undamaged). All three rows always show; house value and repair cost are $0 with no house (choosing or moving). `drawHUD()` returns the box's bottom edge (`rightBottom`) so side panels can sit below it.
   - Not in the HUD: odds (shown in the Roll panel and year review), actions left (in upgrade windows only), damage if hit and hits left (year review only).
@@ -257,8 +259,8 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
 ## Screen layout
 
 - **House, Roll, YearReview:** the player's house is drawn full screen as the background (`FULL_SCREEN_ART` / `drawBackdrop` in `src/ui/houseArt.ts`). Content sits along the bottom, so the house stays visible above it.
-  - House: round "+" markers on the house open upgrade windows, one per zone of the house sprite: door (seal doors, sandbags, store food), foundation (foundation improvement, elevate) and garden (drainage, retaining wall, soil nailing, planting trees, drainage over loose soil). The roof zone has no marker (solar panels are out; open question 4). Each mod's `spot` in `mods.json` decides its marker; positions come from the sprite's measured zones via `spotPositions()` in `houseArt.ts`. Markers have no text label; the spot name and upgrades in place (e.g. "Door upgrades, 1/3 in place") are announced to screen readers on focus. The window is modal: it lists that spot's mods with tooltips; Escape, Close or clicking outside closes it, and it reopens after a purchase. Keep the House view minimal: no text panel, just single-line buttons (no subtext) tiled horizontally and centred along the bottom: "Repair the house" (only while the house is damaged; shown with ✕ if unaffordable, and the reason is announced on focus or click), "Sell and Move" (asks for confirmation first, via `confirmDialog()` in `src/ui/confirm.ts`) and "Skip Upgrades" / "Finish Upgrades" (the label changes once an upgrade is bought that year; either ends the action phase and rolls the weather). Repair cost is in the HUD.
-  - Roll: "One year goes by…" with the bank icon and the year's income (e.g. "+$50,000") below it (income actually arrives at the start of next year, so it's left out when the game ends this year), and a desk calendar (cosmetic, drawn in `src/ui/calendar.ts`) whose pages flip from January to December to show the year passing; no odds, roll numbers or percentages. The same light rain falls every year while it flips, so the weather doesn't give the outcome away. Once it reaches December, a short line beside it (`yearVerdict()` in `copy.ts`): "Unfortunately, a flood hits your home." (naming every disaster that hit), or "You were lucky: there were no climate disasters this year." (never naming the disaster that didn't happen); no ✓/! marks, the words carry the meaning. A hit then plays the designer's flood or landslip animation over the house (see Assets), then the continue button. The HUD and house show the pre-roll state until then, so the result isn't spoiled.
+  - House: round "+" markers on the house open upgrade windows, one per zone of the house sprite: door (seal doors, sandbags, store food), foundation (foundation improvement, elevate) and garden (drainage, retaining wall, soil nailing, planting trees, drainage over loose soil). The roof zone has no marker (solar panels are out; open question 4). Each mod's `spot` in `mods.json` decides its marker; positions come from the sprite's measured zones via `spotPositions()` in `houseArt.ts`. Markers have no text label; the spot name and upgrades in place (e.g. "Door upgrades, 1/3 in place") are announced to screen readers on focus. The upgrades open in a compact popover that grows out of its "+" marker with a tail pointing at it (above the marker if it fits, else below, else beside it; kept on screen); the house isn't dimmed. It's titled "Property Upgrades" (never the zone name), with "You have N upgrade(s) left for this year." below, and lists that spot's mods, each with its icon, price (or why it can't be bought) and a tooltip. A round red × on its top-right corner closes it (`CloseIcon` in `src/ui/closeIcon.ts`, focusable like any button; the × shape carries the meaning, not just the red); so do Escape and clicking outside. It's modal for the keyboard, and reopens in place, without the grow-in, after a purchase. Keep the House view minimal: no text panel, just single-line buttons (no subtext) tiled horizontally and centred along the bottom: "Repair the house" (only while the house is damaged; shown with ✕ if unaffordable, and the reason is announced on focus or click), "Sell and Move" (asks for confirmation first, via `confirmDialog()` in `src/ui/confirm.ts`) and "Skip Upgrades" / "Finish Upgrades" (the label changes once an upgrade is bought that year; either ends the action phase and rolls the weather). Repair cost is in the HUD.
+  - Roll: "One year goes by…" with "You have earned" and, below that, the bank icon and the year's income (e.g. "+$50,000") (income actually arrives at the start of next year, so it's left out when the game ends this year), and a desk calendar (cosmetic, drawn in `src/ui/calendar.ts`) whose pages flip from January to December to show the year passing; no odds, roll numbers or percentages. The same light rain falls every year while it flips, so the weather doesn't give the outcome away. Once it reaches December, a short line beside it (`yearVerdict()` in `copy.ts`): "Unfortunately, a flood hits your home." (naming every disaster that hit), or "You were lucky: there were no climate disasters this year." (never naming the disaster that didn't happen); no ✓/! marks, the words carry the meaning. A hit then plays the designer's flood or landslip animation over the house (see Assets), then the continue button. The HUD and house show the pre-roll state until then, so the result isn't spoiled.
   - YearReview: Cause, Effect and What helped boxes side by side. The font shrinks if needed so the dock stays clear of the HUD.
 - **FinalReport:** stats in a left column, footprint chart and quiz choices in a right column, the house (or rubble) between them.
 - **HUD tour:** at the start of each new game (`startNewGame()` / `takeHudTour()` in `session.ts`), RegionSelect first shows four short callouts (`showCoachMarks()` in `src/ui/coachMarks.ts`, text from `hudIntro()` in `copy.ts`), one each for carbon footprint, bank, house value and total repair cost, each pointing at its HUD row. Next / Got it, Skip or Escape. The "Where will you live?" panel appears after it. It doesn't repeat when returning from HouseSelect.
@@ -282,6 +284,17 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
   - Only pointer movement moves focus, so a resting mouse can't steal keyboard focus when a screen opens.
   - Focused text is mirrored to an aria-live region (`#sr-live`) for screen readers.
   - Text is readable at small sizes.
+  - **Contrast:** text in boxes meets WCAG AAA (at least 7:1). Boxes with text are fully opaque, so a bright background behind them can't lower the contrast. Current pairs (`src/ui/theme.ts`; recheck with the WCAG formula if you change a colour):
+
+    | Text | Background | Ratio |
+    |------|-----------|-------|
+    | text `#ffffff` | panel `#132430` | 15.9 |
+    | textDim `#d3dde5` | panel | 11.5 |
+    | text | button `#1b4058` | 10.9 |
+    | textDim (button detail line) | button | 7.9 |
+    | textDisabled `#b3bdc6` | buttonDisabled `#252d34` | 7.3 |
+    | good `#9ff0b4` / warn `#ffd166` / bad `#ffa89c` | panel | 11.8 / 11.0 / 8.6 |
+    | map label secondary text `#3a4757` | white | 9.5 |
 
 ## Map
 
@@ -330,7 +343,7 @@ The odds and damage values above are game-design numbers set by the team. Hazard
 
 ## Tests that must exist in src/sim
 
-- **Band lookup:** exact boundaries (0, 4, 8, 12, 16, 20) and values above 20 for both disasters.
+- **Band lookup:** exact boundaries (8, 8.5, 9, 9.5, 10, 10.5) and values above 10.5 for both disasters.
 - **Area mapping:** Hills houses never roll floods; Coastal and Urban houses never roll landslides.
 - **Damage:** single mod, stacked mods, reductions past the floor give exactly 10%, no mods gives base damage.
 - **Actions:** a mod costs 1 action, the player can't exceed `actionsPerTurn`, a permanent mod can't be applied twice.
@@ -339,7 +352,7 @@ The odds and damage values above are game-design numbers set by the team. Hazard
 - **Value:** permanent upgrades add their cost to value and full value, consumables add nothing; value never exceeds the full value; selling returns the upgraded value; the house is destroyed exactly when value reaches 0 or below (test 40% × 3 and 10% × 10).
 - **Consumables:** used up only when their disaster hits.
 - **Unrepaired hits:** each hit adds one, a repair resets to 0, a year with no disaster leaves it unchanged.
-- **Footprint:** quiz delta, mod deltas, never below 0, odds use the updated value.
+- **Footprint:** quiz delta, mod deltas, never below `balance.minFootprint`, odds use the updated value; planting trees doesn't change it; every question has 1 correct, 1 neutral and 2 wrong answers.
 - **Year's question:** each year opens with it; actions are locked until it's answered; it can be answered once a year; the answer changes the footprint only when the year ends.
 - **Outcome:** destruction ends the game as a loss immediately; surviving year N is a win; selling is blocked when no other house would be affordable or the player has already moved this year.
 - **Data:** the bundled data validates; a missing `source`, unknown area or gap between weather bands fails loudly.
@@ -353,8 +366,6 @@ Do not invent answers to these. Use the default and leave a `TODO(open-question)
    - Default: no tiers in the MVP.
 2. **Missing numbers:**
    - Starting footprint and yearly base increment.
-   - Quiz answer deltas.
-   - Footprint delta for planting trees.
    - Mod dollar costs.
    - Starting budget, yearly income and house prices.
    - Game length N.

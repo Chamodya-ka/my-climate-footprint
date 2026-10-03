@@ -54,7 +54,7 @@ export class RegionSelect extends Phaser.Scene {
       lineSpacing: 3,
       wordWrap: { width: inner },
     });
-    const bg = panel(this, px, top, PANEL_W, 10).setDepth(-1).setAlpha(0.95);
+    const bg = panel(this, px, top, PANEL_W, 10).setDepth(-1);
     const fitPanel = () => bg.setSize(PANEL_W, info.y + info.height + PAD - top);
     fitPanel();
     const infoPanel = [bg, title, sub, info];
@@ -75,7 +75,7 @@ export class RegionSelect extends Phaser.Scene {
           info.setText(
             [
               `${region.name}: ${region.blurb}`,
-              ...areas.map((a) => `\n${a.name} (inspired by ${a.inspiredBy})\n${areaHazardLine(a)}`),
+              ...areas.map((a) => `\n${a.name}\n${areaHazardLine(a)}`),
               `\n${houses.length} house${houses.length === 1 ? '' : 's'} from ${formatMoney(cheapest)}`,
             ].join('\n'),
           );
@@ -95,7 +95,7 @@ export class RegionSelect extends Phaser.Scene {
       const steps = hudIntro(d).map((step) => ({ ...step, target: hud.rows[step.key] }));
       showCoachMarks(this, steps, nav, () => {
         touring = false;
-        this.tweens.add({ targets: infoPanel, alpha: (o: Phaser.GameObjects.GameObject) => (o === bg ? 0.95 : 1), duration: 250 });
+        this.tweens.add({ targets: infoPanel, alpha: 1, duration: 250 });
       });
     }
 

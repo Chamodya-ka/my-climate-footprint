@@ -156,7 +156,7 @@ export class HouseSelect extends Phaser.Scene {
     const details = this.add.text(
       0,
       0,
-      `${house.blurb}\n\n${area.name} (inspired by ${area.inspiredBy}). ${areaHazardLine(area)}` +
+      `${house.blurb}\n\n${area.name}. ${areaHazardLine(area)}` +
         (check.ok ? '' : `\n\nUnavailable: ${check.reason}`),
       { fontFamily: FONT, fontSize: '16px', color: colours.text, lineSpacing: 3, wordWrap: { width: inner } },
     );

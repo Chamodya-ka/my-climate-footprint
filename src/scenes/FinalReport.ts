@@ -81,19 +81,20 @@ export class FinalReport extends Phaser.Scene {
     this.add.text(rightX + 16, top + 14, 'Carbon footprint', text.h2);
     const chart = { x: rightX + 60, y: top + 60, w: colW - 90, h: 170 };
     const points = [{ year: 0, t: s.history[0]?.footprintBefore ?? s.footprint }, ...s.history.map((h) => ({ year: h.year, t: h.footprintAfter }))];
-    const maxBand = d.weather.bands[d.weather.bands.length - 1]!.max;
-    const maxT = Math.max(maxBand, ...points.map((p) => p.t));
+    // Same range as the HUD gauge, stretched if the footprint went past it.
+    const minT = d.balance.minFootprint;
+    const maxT = Math.max(d.balance.footprintGaugeMax, ...points.map((p) => p.t));
+    const yFor = (t: number) => chart.y + chart.h - ((t - minT) / (maxT - minT)) * chart.h;
     const g = this.add.graphics();
     // Band gridlines, labelled, so the chart reads without colour.
     for (const band of d.weather.bands) {
-      const by = chart.y + chart.h - (band.min / maxT) * chart.h;
+      const by = yFor(band.min);
       g.lineStyle(1, colours.panelEdge).lineBetween(chart.x, by, chart.x + chart.w, by);
       this.add.text(chart.x - 8, by, `${band.min}t`, { fontFamily: FONT, fontSize: '13px', color: colours.textDim }).setOrigin(1, 0.5);
     }
     this.add.text(chart.x - 8, chart.y, `${maxT}t`, { fontFamily: FONT, fontSize: '13px', color: colours.textDim }).setOrigin(1, 0.5);
     g.lineStyle(1, colours.panelEdge).lineBetween(chart.x, chart.y, chart.x + chart.w, chart.y);
     const xFor = (year: number) => chart.x + (year / Math.max(1, d.balance.gameLengthYears)) * chart.w;
-    const yFor = (t: number) => chart.y + chart.h - (t / maxT) * chart.h;
     g.lineStyle(3, colours.focus);
     g.beginPath();
     points.forEach((p, i) => (i === 0 ? g.moveTo(xFor(p.year), yFor(p.t)) : g.lineTo(xFor(p.year), yFor(p.t))));

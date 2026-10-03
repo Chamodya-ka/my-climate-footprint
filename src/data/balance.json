@@ -8,7 +8,14 @@
   "repairCostRate": 1.0,
   "gameLengthYears": 10,
   "startYear": 2026,
-  "startingFootprint": 6,
-  "baseYearlyIncrement": 0.5,
+  "startingFootprint": 8,
+  "minFootprint": 8,
+  "footprintGaugeMax": 11,
+  "quizAnswers": {
+    "correct": { "footprintDelta": -0.25, "count": 1 },
+    "neutral": { "footprintDelta": 0, "count": 1 },
+    "wrong": { "footprintDelta": 0.5, "count": 2 }
+  },
+  "baseYearlyIncreasePercent": 1.2,
   "source": "placeholder"
 }
