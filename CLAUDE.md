@@ -176,11 +176,11 @@ houseValue = max(0, houseValue - valueLost)
 Rules for mods:
 - Each permanent mod can be applied once per house.
 - Consumables are used up when the disaster they protect against hits, and can be restocked for 1 action.
-- All mods are available in every area. Choosing a mod that doesn't fit the area is part of the learning, and the year review should point it out.
+- All mods are available in every area. Choosing a mod that doesn't fit the area is part of the learning. The year review doesn't name it; its preparation box just shows the house had no protection for its own disaster.
 - "Drainage" and "Drainage over loose soil" are separate mods with separate IDs.
 - **Diminishing returns.** Once a house reaches the 10% floor for its disaster, further mods for that disaster add nothing.
   - Example: seal doors plus elevating already gives 40 − 50 → 10% for floods.
-  - Don't show "damage if hit" percentages, reductions, or "won't help here / won't reduce damage further" notes when choosing upgrades (design decision: players discover the effects in the year review). The upgrade window shows each mod's description, whether it's permanent or consumable, and its price.
+  - Don't show "damage if hit" percentages, reductions, or "won't help here / won't reduce damage further" notes when choosing upgrades (design decision: players discover the effects through play; the year review says in words which upgrades helped). The upgrade window shows each mod's description, whether it's permanent or consumable, and its price.
   - Don't block extra mods.
   - When a mod can't be bought, show why on its row in the upgrade window (e.g. "✕ No actions left this year."), not only on focus.
 - Mods stay with the house when it is sold. The player starts fresh in the new house.
@@ -189,7 +189,7 @@ Rules for mods:
 
 ## Carbon footprint and quiz
 
-The game tracks one footprint value, shown to players as the **carbon footprint**, framed as if everyone made the same choices the player does.
+The game tracks one footprint value, shown to players as the **carbon footprint**, moved by the player's choices. The questions put the player in roles with real reach (CEO, councillor, policy maker…), so copy talks about *your* choice, not about everyone copying you.
 
 - **Start:** `balance.startingFootprint` (tonnes).
 - **Each year:** `footprint += footprint × balance.baseYearlyIncreasePercent / 100 + quizAnswerDelta + sum of active mod footprint deltas`.
@@ -206,7 +206,7 @@ The game tracks one footprint value, shown to players as the **carbon footprint*
   - **Awareness across all areas:** helping farmers and land managers adapt, and climate education for everyone (goal: by 2035).
 - The question itself never mentions COP31. After answering, the feedback ends with the priority and its goal ("COP31 priority: <name>. Goal: …", `cop31Line()` in `copy.ts`). Answer labels stay short (they fit two lines on a 64 px button).
 - **Every question has exactly 4 answers:** 1 correct (−0.25 t), 1 neutral (0 t) and 2 wrong (+0.5 t). The kinds, counts and deltas live in `balance.quizAnswers`; each answer's `footprintDelta` in `quiz.json` must be one of them, and boot fails loudly if a question has a different mix. Vary where the correct answer sits, so it isn't always first.
-- **Question dialog** (`src/ui/questionDialog.ts`): a speech bubble that grows out of the HUD's carbon footprint box (which pulses while it's open), over the dimmed house. It can't be dismissed. Before answering it shows only the question and answers: no hint of how an answer changes the footprint. After answering, the same bubble shows short feedback (`quizFeedback()` in `src/ui/copy.ts`): ✓/✗ whether the choice was correct (correct = the lowest `footprintDelta` among the options; ties count; a wrong answer names the best one), which way it moves the carbon footprint ("Assuming everyone makes the same choice you do, the carbon footprint would go down."), and the chosen option ("▶ label") with its `explanation` from `quiz.json`. Other options aren't explained, and the feedback shows no tonne figures. At the same moment the HUD shows the change arrow. Continue closes it and unlocks the upgrades.
+- **Question dialog** (`src/ui/questionDialog.ts`): a speech bubble that grows out of the HUD's carbon footprint box (which pulses while it's open), over the dimmed house. It can't be dismissed. Before answering it shows only the question and answers: no hint of how an answer changes the footprint. After answering, the same bubble shows short feedback (`quizFeedback()` in `src/ui/copy.ts`): ✓/✗ whether the choice was correct (correct = the lowest `footprintDelta` among the options; ties count; a wrong answer names the best one), which way it moves the carbon footprint ("You made the right call, so the carbon footprint would go down." / "With this choice, the carbon footprint would go up."), and the chosen option ("▶ label") with its `explanation` from `quiz.json`. Other options aren't explained, and the feedback shows no tonne figures. At the same moment the HUD shows the change arrow. Continue closes it and unlocks the upgrades.
 
 Example entry in `quiz.json`:
 
@@ -226,8 +226,8 @@ Example entry in `quiz.json`:
 ```
 
 **Framing rule for all player-facing copy:**
-- Say "assuming everyone makes the same choice you do...".
-- Never imply that one household caused a specific flood or landslide.
+- Talk about the player's choice directly: "You made the right call, so the carbon footprint would go down", "Your choices took the carbon footprint from … to …".
+- Choices move the footprint, and the footprint changes the odds. Never say a choice caused a specific flood or landslide.
 
 ## Winning and losing
 
@@ -265,24 +265,24 @@ Example entry in `quiz.json`:
   - Top centre, no box: the calendar year (e.g. "2026") in large white text with a dark outline. Hidden in year 0 (before the first house is bought).
   - HUD icons are the designer's PNGs in `assets/interface_icons/hud_icons/png/` (64 px files shown at `ICON_SIZE`, loaded by `preloadIcons()` in `src/ui/icons.ts`): footprint, bank balance (piggy bank), house value, repair cost.
   - Top right box: bank, house value (current dollar value only), total repair cost (the cost to repair the house fully right now; $0 when undamaged). All three rows always show; house value and repair cost are $0 with no house (choosing or moving). `drawHUD()` returns the box's bottom edge (`rightBottom`) so side panels can sit below it.
-  - Not in the HUD: odds (shown in the Roll panel and year review), actions left (in upgrade windows only), damage if hit and hits left (year review only).
+  - Not in the HUD: odds, damage if hit and hits left (not shown to players anywhere; the year review describes them in words), actions left (in upgrade windows only).
 
 ## Screen layout
 
 - **House, Roll, YearReview:** the player's house is drawn full screen as the background (`FULL_SCREEN_ART` / `drawBackdrop` in `src/ui/houseArt.ts`), with the designer's moving background (`{ live: true }`; see Assets). Content sits along the bottom, so the house stays visible above it.
   - House: round "+" markers on the house open upgrade windows, one per zone of the house sprite: door (seal doors, sandbags, store food), foundation (foundation improvement, elevate) and garden (drainage, retaining wall, soil nailing, planting trees, drainage over loose soil). The roof zone has no marker (solar panels are out; open question 4). Each mod's `spot` in `mods.json` decides its marker; positions come from the sprite's measured zones via `spotPositions()` in `houseArt.ts`. Markers have no text label; the spot name and upgrades in place (e.g. "Door upgrades, 1/3 in place") are announced to screen readers on focus. The upgrades open in a compact popover (`openPopover()` in `src/ui/popover.ts`) that grows out of its "+" marker with a tail pointing at it (above the marker if it fits, else below, else beside it; kept on screen); the house isn't dimmed. It's titled "Property Upgrades" (never the zone name), with "You have N upgrade(s) left for this year." below, and lists that spot's mods, each with its icon, price (or why it can't be bought) and a tooltip. A round red × on its top-right corner closes it (`CloseIcon` in `src/ui/closeIcon.ts`, focusable like any button; the × shape carries the meaning, not just the red); so do Escape and clicking outside. It's modal for the keyboard, and reopens in place, without the grow-in, after a purchase. Keep the House view minimal: no text panel, just single-line buttons (no subtext) tiled horizontally and centred along the bottom: "Repair the house" (only while the house is damaged; shown with ✕ if unaffordable, and the reason is announced on focus or click), "Sell and Move" (asks for confirmation first, via `confirmDialog()` in `src/ui/confirm.ts`) and "Skip Upgrades" / "Finish Upgrades" (the label changes once an upgrade is bought that year; either ends the action phase and rolls the weather). Repair cost is in the HUD.
   - Roll: "One year goes by…" with "You have earned" and, below that, the bank icon and next year's income (e.g. "+$130,000": 20% of the house's purchase price; income actually arrives at the start of next year, so it's left out when the game ends this year), and a desk calendar (cosmetic, drawn in `src/ui/calendar.ts`) whose pages flip from January to December to show the year passing; no odds, roll numbers or percentages. The same light rain falls every year while it flips, so the weather doesn't give the outcome away. Once it reaches December, a short line beside it (`yearVerdict()` in `copy.ts`): "Unfortunately, a flood hits your home." (naming every disaster that hit), or "You were lucky: there were no climate disasters this year." (never naming the disaster that didn't happen); no ✓/! marks, the words carry the meaning. A hit then plays the designer's flood or landslip animation over the house (see Assets), then the continue button. The HUD and house show the pre-roll state until then, so the result isn't spoiled.
-  - YearReview: Cause, Effect and What helped boxes side by side. The font shrinks if needed so the dock stays clear of the HUD.
+  - YearReview: titled "Recap of <year>" (e.g. "Recap of 2026"), with a "Start next year" button (or "See the final report" when the game is over) and three untitled boxes side by side (`yearReview()` in `copy.ts` returns each box's text and tone), all in words with **no numbers**. Each box's text is coloured by its tone: green (`good`), yellow (`warn`) or red (`bad`); the words always say the same thing, so colour is never the only signal. (1) "Your choice decreased / didn't affect / increased the carbon footprint." (green / yellow / red, by the answer's own change); (2) only whether a disaster damaged the house: "Your house wasn't damaged by a flood this year." (green), or "Your house was damaged by a flood." with why, linking heavy rain, storms and flood causes to climate change (never to the player's choice), and a line if it was destroyed (red); (3) preparation in general terms, **never naming upgrades**: no upgrades for this disaster (red), upgrades that helped but more could be done (yellow), or all that could be done (green). The font shrinks if needed so the dock stays clear of the HUD.
 - **FinalReport:** stats in a left column, footprint chart and quiz choices in a right column, the house (or rubble) between them.
 - **HUD tour:** at the start of each new game (`startNewGame()` / `takeHudTour()` in `session.ts`), RegionSelect first shows four short callouts (`showCoachMarks()` in `src/ui/coachMarks.ts`, text from `hudIntro()` in `copy.ts`), one each for carbon footprint, bank, house value and total repair cost, each pointing at its HUD row. Next / Got it, Skip or Escape. The "Where will you live?" panel appears after it. It doesn't repeat when returning from HouseSelect.
 - **RegionSelect:** the valley map (`assets/map`) fills the screen. Each region has a label (name and hazards, drawn from game data, not the labels baked into `cartoon_regions.png`). Hovering anywhere in a region highlights it and fills the info panel in the top-right corner, below the HUD's bank box; clicking anywhere in it, or its label, selects it.
 - **HouseSelect:** the map zooms into the region's crop (`zoom_data.json`), then cross-fades to the close-up art `zoom/zoom_<mapRegion>_clean.png`, top-aligned so houses near the top clear the HUD. Each house is drawn as its sprite at its `zoom_data` pin with a price tag ("$595k / Standard"); focus order is left to right. Choosing a house opens a popover like the upgrade windows (`openPopover()` in `src/ui/popover.ts`): it grows out of the house with a tail pointing at it, has the red × on its top-right corner (Escape and clicking outside also close it) and doesn't dim the map. It shows the house name, facts (tier, bedrooms, floor area, year built, floor height; no price), a preview and the blurb (no area or hazard line), plus the reason when it can't be bought, and a centred "Buy for $X" button. "Back to the map" (bottom left) returns to RegionSelect. Unaffordable houses are dimmed but can still be opened, so the window can say why.
-- **Title:** plain dark background.
+- **Title:** plain dark background. A two-line tagline ("Your choices change how often disaster strikes. / Your preparation decides how much it hurts.") sums up the two levers, then a short how-to-play and Start (`titleIntro()` in `copy.ts`). The footprint line says the right call makes floods and landslides less frequent, never that a choice causes one.
 
 ## Content and tone
 
 - Use NZ English. Keep the tone practical and respectful, never doom-laden.
-- Every year review states cause → effect → what helped or would have helped.
+- Every year review states cause → effect → what helped or would have helped, in words, without numbers.
 - Every data entry records a `source`.
   - Placeholder values must carry `"source": "placeholder"`.
   - Game copy must not present placeholder values as real-world data.

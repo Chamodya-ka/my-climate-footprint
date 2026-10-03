@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { loadGameData } from '../data';
 import type { DisasterResult } from '../sim/state';
-import { quizFeedback, yearVerdict } from './copy';
+import { dataWith, FLOOD_HOUSE, LANDSLIDE_HOUSE, startedGame, YEAR1_QUESTION } from '../sim/testHelpers';
+import { applyMod, endTurn, expectOk } from '../sim/turn';
+import { quizFeedback, yearReview, yearVerdict } from './copy';
 
 const data = loadGameData();
 const question = data.quiz[0]!;
@@ -34,9 +36,10 @@ describe('quizFeedback', () => {
     expect(quizFeedback(question, byDelta(neutral.footprintDelta).id).footprintLine).toContain('stay the same');
   });
 
-  it('frames the change as everyone making the same choice, never blaming one household', () => {
-    const f = quizFeedback(question, worse.id);
-    expect(f.footprintLine).toMatch(/^Assuming everyone makes the same choice you do, the carbon footprint/);
+  it("frames the change as the player's choice, never blaming it for a specific disaster", () => {
+    expect(quizFeedback(question, best.id).footprintLine).toMatch(/^You made the right call, so the carbon footprint/);
+    expect(quizFeedback(question, worse.id).footprintLine).toMatch(/^With this choice, the carbon footprint/);
+    for (const a of question.answers) expect(quizFeedback(question, a.id).footprintLine).not.toMatch(/flood|landslide/i);
   });
 });
 
@@ -59,5 +62,64 @@ describe('yearVerdict', () => {
     expect(yearVerdict([result('flood', true), result('landslide', true)])).toBe(
       'Unfortunately, a flood and a landslide hit your home.',
     );
+  });
+});
+
+describe('yearReview', () => {
+  const always = dataWith((d) => {
+    d.weather.bands.forEach((b) => (b.odds = { flood: 100, landslide: 100 }));
+    d.balance.startingBudget = Math.max(...d.houses.map((h) => h.price));
+  });
+  const never = dataWith((d) => d.weather.bands.forEach((b) => (b.odds = { flood: 0, landslide: 0 })));
+  const review = (d: typeof data, houseId: string, answerIndex = 0) => {
+    const s = expectOk(endTurn(startedGame(houseId, d, 1, answerIndex), d));
+    return yearReview(d, s, s.history[0]!);
+  };
+  const indexOf = (delta: number) => YEAR1_QUESTION.answers.findIndex((a) => a.footprintDelta === delta);
+  const { correct, neutral, wrong } = data.balance.quizAnswers;
+
+  it('has three boxes with no figures', () => {
+    for (const d of [always, never]) {
+      for (const houseId of [FLOOD_HOUSE, LANDSLIDE_HOUSE]) {
+        const boxes = review(d, houseId);
+        expect(boxes).toHaveLength(3);
+        for (const box of boxes) expect(box.text).not.toMatch(/\d|%|\$/);
+      }
+    }
+  });
+
+  it('box 1 says whether the choice decreased, increased or didn\'t affect the footprint, coloured to match', () => {
+    expect(review(never, FLOOD_HOUSE, indexOf(correct.footprintDelta))[0]).toEqual({
+      text: 'Your choice decreased the carbon footprint.',
+      tone: 'good',
+    });
+    expect(review(never, FLOOD_HOUSE, indexOf(wrong.footprintDelta))[0]).toEqual({
+      text: 'Your choice increased the carbon footprint.',
+      tone: 'bad',
+    });
+    expect(review(never, FLOOD_HOUSE, indexOf(neutral.footprintDelta))[0]).toEqual({
+      text: "Your choice didn't affect the carbon footprint.",
+      tone: 'warn',
+    });
+  });
+
+  it('box 2 only says whether a disaster damaged the house, and why', () => {
+    expect(review(never, FLOOD_HOUSE)[1]).toEqual({ text: "Your house wasn't damaged by a flood this year.", tone: 'good' });
+    const flood = review(always, FLOOD_HOUSE)[1]!;
+    expect(flood.tone).toBe('bad');
+    expect(flood.text).toMatch(/^Your house was damaged by a flood\. .*climate change/i);
+    expect(flood.text).not.toMatch(/unrepaired/i);
+    expect(review(always, LANDSLIDE_HOUSE)[1]!.text).toMatch(/^Your house was damaged by a landslide\. Heavy rain.*climate change/);
+  });
+
+  it('box 3 never names upgrades; red with none, yellow if more could be done', () => {
+    const sealed = expectOk(applyMod(startedGame(FLOOD_HOUSE, always), always, 'seal-doors'));
+    const s = expectOk(endTurn(sealed, always));
+    const help = yearReview(always, s, s.history[0]!)[2]!;
+    for (const m of data.mods) expect(help.text).not.toContain(m.name);
+    expect(help).toEqual({ text: 'Your upgrades helped reduce the damage, but you could do more to prepare.', tone: 'warn' });
+    const none = review(always, FLOOD_HOUSE)[2]!;
+    expect(none.tone).toBe('bad');
+    expect(none.text).toMatch(/^You didn't have any upgrades to protect against floods/);
   });
 });

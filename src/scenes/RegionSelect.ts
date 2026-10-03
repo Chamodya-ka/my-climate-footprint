@@ -70,8 +70,6 @@ export class RegionSelect extends Phaser.Scene {
     for (const region of d.regions) {
       const meta = m.labels.regions[region.mapRegion]!;
       const areas = d.areas.filter((a) => a.regionId === region.id);
-      const houses = d.houses.filter((h) => areas.some((a) => a.id === h.areaId));
-      const cheapest = Math.min(...houses.map((h) => h.price));
       const at = map.toScreen(meta.x, meta.y);
       const label = new RegionLabel(this, at.x, at.y, region.name, regionHazardLabel(d, region.id), rgbToNumber(meta.tint), {
         onFocus: () => {
@@ -80,7 +78,6 @@ export class RegionSelect extends Phaser.Scene {
             [
               `${region.name}: ${region.blurb}`,
               ...areas.map((a) => `\n${a.name}\n${areaHazardLine(a)}`),
-              `\n${houses.length} house${houses.length === 1 ? '' : 's'} from ${formatMoney(cheapest)}`,
             ].join('\n'),
           );
           fitPanel();
