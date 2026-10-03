@@ -38,7 +38,7 @@
     },
     {
       "id": "drainage",
-      "name": "Drainage",
+      "name": "Improve Drainage",
       "icon": "drainage",
       "spot": "garden",
       "type": "permanent",

@@ -74,7 +74,7 @@ describe("Rimu's lines around the question", () => {
 
   it('leads into the upgrades afterwards, or into repairs when the house is damaged', () => {
     const fresh = startedGame();
-    expect(kiwiAfterQuestion(fresh)).toBe("Now let's see how you could upgrade your house to handle climate disasters.");
+    expect(kiwiAfterQuestion(fresh)).toBe("Now let's see how you could upgrade your house to handle climate hazards.");
     const damaged = { ...fresh, house: { ...fresh.house!, value: fresh.house!.value - 1 } };
     expect(kiwiAfterQuestion(damaged)).toMatch(/^Your house is damaged\. Now repair it/);
   });
@@ -91,7 +91,7 @@ describe('yearVerdict', () => {
 
   it('says the player was lucky when nothing hit, without naming a disaster', () => {
     const v = yearVerdict([result('flood', false)]);
-    expect(v).toBe('You were lucky: there were no climate disasters this year.');
+    expect(v).toBe('You were lucky: there were no climate hazards this year.');
   });
 
   it('names each disaster that hit', () => {
@@ -169,15 +169,13 @@ describe('kiwiIntro', () => {
     expect(steps.map((s) => s.key).filter(Boolean)).toEqual(['footprint', 'bank', 'houseValue', 'repairCost']);
     expect(steps[0]!.text).toContain("I'm Rimu");
     expect(all).toMatch(/carbon footprint/);
-    expect(all).toMatch(/upgrades or repairs/);
+    expect(all).toMatch(/choose upgrades/);
     expect(all).toMatch(/to win/);
   });
 
   it('takes its numbers from the game data', () => {
     expect(all).toContain('$1,500,000');
-    expect(all).toContain(`${data.balance.incomePercentOfHouseValue}%`);
-    expect(all).toContain(`${data.balance.actionsPerTurn} actions`);
-    expect(all).toContain(`${data.balance.startYear + data.balance.gameLengthYears - 1}`);
+    expect(all).toContain(`${data.balance.gameLengthYears} years`);
   });
 
   it('speaks in short sentences', () => {
@@ -223,17 +221,17 @@ describe("Rimu's tips on the House screen", () => {
     for (const sentence of text.split(/(?<=[.!?])\s+/)) expect(sentence.split(/\s+/).length).toBeLessThanOrEqual(MAX_WORDS);
   };
 
-  it('explains the + buttons and the yearly upgrade limit from the game data', () => {
+  it('explains the upgrade buttons and the yearly upgrade limit from the game data', () => {
     const tip = kiwiUpgradeTip(data);
-    expect(tip).toContain('+ buttons');
+    expect(tip).toContain('upgrade buttons');
     expect(tip).toContain(`only do ${data.balance.actionsPerTurn / data.balance.actionsPerMod} each year`);
     short(tip);
   });
 
-  it('explains the Sell and Finish buttons in short sentences', () => {
+  it('explains finishing upgrades and selling in short sentences', () => {
     const tip = kiwiYearEndTip();
-    expect(tip).toContain('"Sell and Move"');
-    expect(tip).toContain('"Finish Upgrades"');
+    expect(tip).toMatch(/finish upgrades/);
+    expect(tip).toMatch(/sell your house and move/);
     short(tip);
   });
 });

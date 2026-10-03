@@ -64,7 +64,7 @@ function box(
 
 /**
  * Top left: the carbon footprint. Top centre: the year, as big text.
- * Top right: bank, house value, total repair cost.
+ * Top right: bank, house value, repair cost.
  */
 export interface BoxRect {
   x: number;
@@ -277,7 +277,7 @@ export function drawHUD(scene: Phaser.Scene, data: GameData, state: GameState, o
     {
       key: 'repairCost',
       icon: 'icon-repair',
-      label: 'Total repair cost',
+      label: 'Repair cost',
       value: formatMoney(house ? repairCost(data, house) : 0),
     },
   ];

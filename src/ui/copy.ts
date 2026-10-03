@@ -36,7 +36,7 @@ const lower = (d: Disaster) => DISASTER_NAME[d].toLowerCase();
 /** The line shown once the year has passed: each disaster that hit, or that none did. */
 export function yearVerdict(results: DisasterResult[]): string {
   const hits = results.filter((r) => r.hit);
-  if (hits.length === 0) return 'You were lucky: there were no climate disasters this year.';
+  if (hits.length === 0) return 'You were lucky: there were no climate hazards this year.';
   const names = listJoin(hits.map((r) => `a ${lower(r.disaster)}`));
   return `Unfortunately, ${names} ${hits.length > 1 ? 'hit' : 'hits'} your home.`;
 }
@@ -64,7 +64,7 @@ export function areaHazardLine(area: Area): string {
 export function modTooltip(mod: Mod): string {
   const kind =
     mod.type === 'consumable'
-      ? 'Used up when its disaster hits; restock it afterwards. Adds nothing to the house value.'
+      ? 'Used up when its hazard hits; restock it afterwards. Adds nothing to the house value.'
       : 'Permanent: stays with this house and adds to its value.';
   return `${mod.blurb}\n${kind}`;
 }
@@ -218,44 +218,43 @@ export interface KiwiStep {
 
 /** What the kiwi guide says after Start: the carbon footprint, money, then how a year works. Short sentences. */
 export function kiwiIntro(data: GameData): KiwiStep[] {
-  const { startingBudget, incomePercentOfHouseValue, actionsPerTurn } = data.balance;
+  const { startingBudget, gameLengthYears } = data.balance;
   return [
     { text: "Kia ora! I'm Rimu. I'll show you how to keep your home safe." },
     {
       key: 'footprint',
-      text: 'This is the carbon footprint. Your choices push it up or down. A bigger footprint means more floods and landslides.',
+      text: 'This is the carbon footprint. Your choices push it up or down. A bigger footprint drives more climate change.',
     },
     {
       key: 'bank',
       text:
         `This is your bank. You start with ${formatMoney(startingBudget)}. ` +
-        `Each year you earn ${incomePercentOfHouseValue}% of what you paid for your house.`,
+        `Each year you earn an income.`,
     },
     {
       key: 'houseValue',
-      text: "This is your house's value. Floods and landslides knock it down. If it reaches $0, your house is destroyed.",
+      text: "This is your house's value. Climate hazards can knock it down. If it reaches zero, your house is destroyed.",
     },
     {
       key: 'repairCost',
-      text: 'This is what repairs would cost right now. Repairing fixes all the damage, but it uses an action.',
+      text: 'This is what repairs to your house would cost. Repairing fixes all the damage.',
     },
     { text: 'Each year starts with a big decision. Make the right call to keep the carbon footprint down.' },
     {
       text:
-        `Then you get ${actionsPerTurn} actions. Spend them on upgrades or repairs. ` +
-        'Pick upgrades that suit the hazards where you live.',
+        `Then you get to choose upgrades that protect your house from climate hazards.`,
     },
     {
-      text: `Keep your house standing until the end of ${lastCalendarYear(data)} to win. First, choose where to live. Good luck!`,
+      text: `Keep your house standing for ${gameLengthYears} years to win. First, choose where to live. Good luck!`,
     },
   ];
 }
 
 /** The title screen's pitch: a two-line tagline and the goal in one line. Rimu explains the rest after Start. */
-export function titleIntro(data: GameData): { tagline: string; body: string } {
+export function titleIntro(): { tagline: string; body: string } {
   return {
-    tagline: 'Your choices change how often disaster strikes.\nYour preparation decides how much it hurts.',
-    body: `Buy a home and keep it standing from ${data.balance.startYear} to ${lastCalendarYear(data)}.`,
+    tagline: 'Your choices affect how often climate hazards strike.\nYour preparation decides how much it hurts.',
+    body: 'Buy a home and keep it standing.',
   };
 }
 
@@ -295,20 +294,19 @@ export function kiwiBeforeQuestion(state: GameState): string {
 export function kiwiAfterQuestion(state: GameState): string {
   const house = state.house;
   return house && house.value < house.fullValue
-    ? 'Your house is damaged. Now repair it, or upgrade it to handle the next climate disaster.'
-    : "Now let's see how you could upgrade your house to handle climate disasters.";
+    ? 'Your house is damaged. Now repair it, or upgrade it to handle the next climate hazard.'
+    : "Now let's see how you could upgrade your house to handle climate hazards.";
 }
 
 /** Rimu's one-off tip about the "+" buttons, the first time the upgrades unlock. Short sentences. */
 export function kiwiUpgradeTip(data: GameData): string {
   const perYear = Math.floor(data.balance.actionsPerTurn / data.balance.actionsPerMod);
-  return `See the + buttons? Each one opens upgrades. Upgrades protect your house from disasters. You can only do ${perYear} each year.`;
+  return `See these upgrade buttons? Upgrades protect your house from climate hazards. You can only do ${perYear} each year.`;
 }
 
 /** Rimu's one-off tip about the two year-end buttons, after the player's first upgrade. Short sentences. */
 export function kiwiYearEndTip(): string {
   return (
-    'Nice work! Now you have two options. "Sell and Move" sells this house so you can buy another. ' +
-    '"Finish Upgrades" ends the year. Then we see what the weather brings.'
+    'Nice work! Now you have either continue upgrading or finish upgrades for this year. You can also sell your house and move to a different place.'
   );
 }

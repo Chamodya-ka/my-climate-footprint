@@ -23,7 +23,7 @@ export class Title extends Phaser.Scene {
     new MapView(this);
     this.add.rectangle(0, 0, WIDTH, HEIGHT, colours.bg, MAP_DIM).setOrigin(0).setDepth(-9);
     this.add.text(WIDTH / 2, TITLE_Y, 'My Climate Footprint', text.title).setOrigin(0.5);
-    const intro = titleIntro(d);
+    const intro = titleIntro();
     const tagline = this.add
       .text(WIDTH / 2, TITLE_Y + 70, intro.tagline, { ...text.h2, align: 'center', lineSpacing: 6 })
       .setOrigin(0.5, 0);

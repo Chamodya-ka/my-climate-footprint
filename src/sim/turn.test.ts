@@ -194,10 +194,10 @@ describe('repairs', () => {
   const LOST = 250000;
   const damaged = () => withHouse(startedGame(), { value: FLOOD_PRICE - LOST });
 
-  it('cost 1 action and restore exactly the original value', () => {
+  it('cost no actions and restore exactly the full value', () => {
     const s = damaged();
     const after = expectOk(repair(s, data));
-    expect(after.actionsLeft).toBe(s.actionsLeft - 1);
+    expect(after.actionsLeft).toBe(s.actionsLeft);
     expect(after.house!.value).toBe(after.house!.fullValue);
   });
 
@@ -216,8 +216,8 @@ describe('repairs', () => {
     expect(checkRepair({ ...damaged(), bank: LOST - 1 }, data).ok).toBe(false);
   });
 
-  it('are unavailable with no actions left', () => {
-    expect(checkRepair({ ...damaged(), actionsLeft: 0 }, data).ok).toBe(false);
+  it('are still available with no actions left', () => {
+    expect(checkRepair({ ...damaged(), actionsLeft: 0 }, data).ok).toBe(true);
   });
 });
 

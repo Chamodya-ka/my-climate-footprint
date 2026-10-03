@@ -160,8 +160,6 @@ export function checkRepair(state: GameState, data: GameData): Check {
   if (!phase.ok) return phase;
   const house = state.house as HouseState;
   if (house.value >= house.fullValue) return fail("The house isn't damaged.");
-  const actions = checkActions(state, data.balance.actionsPerRepair);
-  if (!actions.ok) return actions;
   const cost = repairCost(data, house);
   if (cost > state.bank) return fail(`Repairs cost ${formatMoney(cost)}. You have ${formatMoney(state.bank)}.`);
   return OK;
@@ -175,7 +173,6 @@ export function repair(state: GameState, data: GameData): Result {
   const cost = repairCost(data, house);
   s.thisYear.repairs.push({ cost, valueRestored: house.fullValue - house.value });
   s.bank -= cost;
-  s.actionsLeft -= data.balance.actionsPerRepair;
   house.value = house.fullValue;
   house.unrepairedHits = 0;
   return ok(s);

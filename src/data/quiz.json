@@ -780,7 +780,7 @@
       "answers": [
         {
           "id": "disasters-only",
-          "label": "Cover climate only when disaster strikes",
+          "label": "Cover climate only when a hazard strikes",
           "footprintDelta": 0.0,
           "explanation": "Readers hear about climate, but only when it's too late to prepare."
         },

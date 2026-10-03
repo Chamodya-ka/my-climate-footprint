@@ -19,7 +19,6 @@ export const balanceSchema = z.strictObject({
   incomePercentOfHouseValue: z.number().nonnegative(),
   actionsPerTurn: z.number().int().positive(),
   actionsPerMod: z.number().int().positive(),
-  actionsPerRepair: z.number().int().positive(),
   minDamagePercent: percent,
   repairCostRate: z.number().nonnegative(),
   gameLengthYears: z.number().int().positive(),
