@@ -1,0 +1,54 @@
+{
+  "houses": [
+    {
+      "id": "near-beach",
+      "areaId": "shoreline-flats",
+      "map": { "x": 760, "y": 775 },
+      "name": "House near the beach",
+      "style": "bungalow",
+      "price": 750000,
+      "blurb": "A weatherboard bungalow a short walk from the beach.",
+      "source": "placeholder"
+    },
+    {
+      "id": "beachfront",
+      "areaId": "harbour-bays",
+      "map": { "x": 1290, "y": 690 },
+      "name": "Beachfront house",
+      "style": "beachfront",
+      "price": 900000,
+      "blurb": "Right on the water, with a deck facing the harbour.",
+      "source": "placeholder"
+    },
+    {
+      "id": "valley-house",
+      "areaId": "river-valley",
+      "map": { "x": 530, "y": 500 },
+      "name": "Valley house",
+      "style": "villa",
+      "price": 700000,
+      "blurb": "A family villa on the flat valley floor near the river.",
+      "source": "placeholder"
+    },
+    {
+      "id": "townhouse",
+      "areaId": "city-centre",
+      "map": { "x": 690, "y": 425 },
+      "name": "Townhouse",
+      "style": "townhouse",
+      "price": 600000,
+      "blurb": "A compact townhouse close to shops and the train.",
+      "source": "placeholder"
+    },
+    {
+      "id": "slope-house",
+      "areaId": "ridge-hillside",
+      "map": { "x": 980, "y": 400 },
+      "name": "House near a slope",
+      "style": "hillside",
+      "price": 650000,
+      "blurb": "Bush views, with a steep bank rising behind the section.",
+      "source": "placeholder"
+    }
+  ]
+}

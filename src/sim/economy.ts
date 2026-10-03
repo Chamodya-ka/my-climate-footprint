@@ -1,0 +1,22 @@
+import type { GameData, House } from '../data/schemas';
+import type { HouseState } from './state';
+
+export function repairCost(data: GameData, house: HouseState): number {
+  return Math.round(data.balance.repairCostRate * (house.originalValue - house.value));
+}
+
+/** Houses the player could move to: every house except the one they're leaving. */
+export function otherHouses(data: GameData, excludeHouseId: string | null): House[] {
+  return data.houses.filter((h) => h.id !== excludeHouseId);
+}
+
+export function cheapestOtherHouse(data: GameData, excludeHouseId: string | null): House | null {
+  return otherHouses(data, excludeHouseId).reduce<House | null>(
+    (best, h) => (best === null || h.price < best.price ? h : best),
+    null,
+  );
+}
+
+export function netWorth(bank: number, house: HouseState | null): number {
+  return bank + (house?.value ?? 0);
+}

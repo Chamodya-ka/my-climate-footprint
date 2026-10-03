@@ -1,0 +1,235 @@
+import { z } from 'zod';
+
+export const DISASTERS = ['flood', 'landslide'] as const;
+export const disasterSchema = z.enum(DISASTERS);
+export type Disaster = z.infer<typeof disasterSchema>;
+
+const id = z.string().regex(/^[a-z0-9-]+$/, 'ids are lower-case kebab-case');
+const source = z.string().min(1, 'every data entry records a source');
+const percent = z.number().min(0).max(100);
+const money = z.number().int().nonnegative();
+
+/** A partial map from disaster to a number, e.g. `{ "flood": 20 }`. */
+const perDisaster = z.partialRecord(disasterSchema, percent);
+const fullPerDisaster = z.record(disasterSchema, percent);
+
+export const balanceSchema = z.strictObject({
+  startingBudget: money,
+  yearlyIncome: money,
+  actionsPerTurn: z.number().int().positive(),
+  actionsPerMod: z.number().int().positive(),
+  actionsPerRepair: z.number().int().positive(),
+  minDamagePercent: percent,
+  repairCostRate: z.number().nonnegative(),
+  gameLengthYears: z.number().int().positive(),
+  startingFootprint: z.number().nonnegative(),
+  baseYearlyIncrement: z.number(),
+  source,
+});
+
+export const weatherSchema = z.strictObject({
+  bands: z
+    .array(
+      z.strictObject({
+        min: z.number().nonnegative(),
+        max: z.number().positive(),
+        odds: fullPerDisaster,
+      }),
+    )
+    .min(1),
+  baseDamagePercent: fullPerDisaster,
+  source,
+});
+
+export const areasSchema = z.strictObject({
+  regions: z
+    .array(
+      z.strictObject({
+        id,
+        name: z.string().min(1),
+        /** Key of this region's shape in assets/map/region_labels.json. */
+        mapRegion: z.string().min(1),
+        blurb: z.string().min(1),
+      }),
+    )
+    .min(1),
+  areas: z
+    .array(
+      z.strictObject({
+        id,
+        regionId: id,
+        name: z.string().min(1),
+        inspiredBy: z.string().min(1),
+        disasters: z.array(disasterSchema).min(1),
+        floodCauses: z.array(z.string().min(1)),
+        source,
+      }),
+    )
+    .min(1),
+});
+
+export const housesSchema = z.strictObject({
+  houses: z
+    .array(
+      z.strictObject({
+        id,
+        areaId: id,
+        /** Pin position on the map, in map-image pixels (assets/map, 1600×1000). */
+        map: z.strictObject({ x: z.number().nonnegative(), y: z.number().nonnegative() }),
+        name: z.string().min(1),
+        style: z.enum(['bungalow', 'beachfront', 'villa', 'townhouse', 'hillside']),
+        price: money.positive(),
+        blurb: z.string().min(1),
+        source,
+      }),
+    )
+    .min(2, 'selling needs at least one other house to move to'),
+});
+
+/** Where on the house a mod's "+" marker sits. */
+export const SPOTS = ['doors', 'foundations', 'drains', 'inside', 'garden', 'slope'] as const;
+export type Spot = (typeof SPOTS)[number];
+
+export const modsSchema = z.strictObject({
+  mods: z
+    .array(
+      z.strictObject({
+        id,
+        name: z.string().min(1),
+        spot: z.enum(SPOTS),
+        type: z.enum(['permanent', 'consumable']),
+        cost: money,
+        reductions: perDisaster,
+        footprintDelta: z.number(),
+        blurb: z.string().min(1),
+        source,
+      }),
+    )
+    .min(1),
+});
+
+export const quizSchema = z.strictObject({
+  questions: z
+    .array(
+      z.strictObject({
+        id,
+        prompt: z.string().min(1),
+        answers: z
+          .array(z.strictObject({ id, label: z.string().min(1), footprintDelta: z.number() }))
+          .min(2),
+        source,
+      }),
+    )
+    .min(1),
+});
+
+export type Balance = z.infer<typeof balanceSchema>;
+export type Weather = z.infer<typeof weatherSchema>;
+export type WeatherBand = Weather['bands'][number];
+export type Region = z.infer<typeof areasSchema>['regions'][number];
+export type Area = z.infer<typeof areasSchema>['areas'][number];
+export type House = z.infer<typeof housesSchema>['houses'][number];
+export type Mod = z.infer<typeof modsSchema>['mods'][number];
+export type QuizQuestion = z.infer<typeof quizSchema>['questions'][number];
+export type QuizAnswer = QuizQuestion['answers'][number];
+
+export interface GameData {
+  balance: Balance;
+  weather: Weather;
+  regions: Region[];
+  areas: Area[];
+  houses: House[];
+  mods: Mod[];
+  quiz: QuizQuestion[];
+}
+
+export interface RawGameData {
+  balance: unknown;
+  weather: unknown;
+  areas: unknown;
+  houses: unknown;
+  mods: unknown;
+  quiz: unknown;
+}
+
+export class DataValidationError extends Error {
+  constructor(public readonly problems: string[]) {
+    super(`Invalid game data:\n- ${problems.join('\n- ')}`);
+    this.name = 'DataValidationError';
+  }
+}
+
+function parseFile<T>(file: string, schema: z.ZodType<T>, raw: unknown, problems: string[]): T | null {
+  const result = schema.safeParse(raw);
+  if (result.success) return result.data;
+  for (const issue of result.error.issues) {
+    problems.push(`${file}: ${issue.path.join('.') || '(root)'}: ${issue.message}`);
+  }
+  return null;
+}
+
+function checkUniqueIds(file: string, items: { id: string }[], problems: string[]): void {
+  const seen = new Set<string>();
+  for (const item of items) {
+    if (seen.has(item.id)) problems.push(`${file}: duplicate id "${item.id}"`);
+    seen.add(item.id);
+  }
+}
+
+/** Validates every data file plus cross-references. Throws a DataValidationError listing every problem. */
+export function parseGameData(raw: RawGameData): GameData {
+  const problems: string[] = [];
+  const balance = parseFile('balance.json', balanceSchema, raw.balance, problems);
+  const weather = parseFile('weather.json', weatherSchema, raw.weather, problems);
+  const areas = parseFile('areas.json', areasSchema, raw.areas, problems);
+  const houses = parseFile('houses.json', housesSchema, raw.houses, problems);
+  const mods = parseFile('mods.json', modsSchema, raw.mods, problems);
+  const quiz = parseFile('quiz.json', quizSchema, raw.quiz, problems);
+
+  if (!balance || !weather || !areas || !houses || !mods || !quiz) {
+    throw new DataValidationError(problems);
+  }
+
+  checkUniqueIds('areas.json regions', areas.regions, problems);
+  checkUniqueIds('areas.json areas', areas.areas, problems);
+  checkUniqueIds('houses.json', houses.houses, problems);
+  checkUniqueIds('mods.json', mods.mods, problems);
+  checkUniqueIds('quiz.json', quiz.questions, problems);
+  for (const q of quiz.questions) checkUniqueIds(`quiz.json ${q.id} answers`, q.answers, problems);
+
+  const regionIds = new Set(areas.regions.map((r) => r.id));
+  for (const area of areas.areas) {
+    if (!regionIds.has(area.regionId)) problems.push(`areas.json: area "${area.id}" has unknown region "${area.regionId}"`);
+    if (area.disasters.includes('flood') && area.floodCauses.length === 0) {
+      problems.push(`areas.json: flood area "${area.id}" needs at least one flood cause for review copy`);
+    }
+  }
+  const areaIds = new Set(areas.areas.map((a) => a.id));
+  for (const house of houses.houses) {
+    if (!areaIds.has(house.areaId)) problems.push(`houses.json: house "${house.id}" has unknown area "${house.areaId}"`);
+  }
+
+  // Bands must be sorted, contiguous and start at 0.
+  weather.bands.forEach((band, i) => {
+    if (band.max <= band.min) problems.push(`weather.json: band ${i} max must be above min`);
+    const prev = weather.bands[i - 1];
+    if (i === 0 && band.min !== 0) problems.push('weather.json: first band must start at 0');
+    if (prev && prev.max !== band.min) problems.push(`weather.json: band ${i} must start where band ${i - 1} ends`);
+  });
+
+  if (balance.minDamagePercent > Math.min(...Object.values(weather.baseDamagePercent))) {
+    problems.push('balance.json: minDamagePercent is above a base damage value');
+  }
+
+  if (problems.length > 0) throw new DataValidationError(problems);
+
+  return {
+    balance,
+    weather,
+    regions: areas.regions,
+    areas: areas.areas,
+    houses: houses.houses,
+    mods: mods.mods,
+    quiz: quiz.questions,
+  };
+}

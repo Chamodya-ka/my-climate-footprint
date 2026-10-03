@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en-NZ">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Climate Footprint</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #0f1b24; color: #f2f2f2; font-family: system-ui, sans-serif; }
+      #game { width: 100%; height: 100%; }
+      .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+      #fatal { display: none; padding: 24px; white-space: pre-wrap; font: 16px/1.5 monospace; background: #3a0d0d; }
+    </style>
+  </head>
+  <body>
+    <pre id="fatal" role="alert"></pre>
+    <div id="sr-live" class="sr-only" aria-live="polite"></div>
+    <div id="game"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
