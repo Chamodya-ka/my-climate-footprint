@@ -1,6 +1,6 @@
 {
-  "startingBudget": 1500000,
-  "incomePercentOfHouseValue": 20,
+  "startingBudget": 1000000,
+  "incomePercentOfHouseValue": 10,
   "actionsPerTurn": 3,
   "actionsPerMod": 1,
   "minDamagePercent": 10,

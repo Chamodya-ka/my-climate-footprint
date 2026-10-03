@@ -174,7 +174,7 @@ describe('kiwiIntro', () => {
   });
 
   it('takes its numbers from the game data', () => {
-    expect(all).toContain('$1,500,000');
+    expect(all).toContain('$1,000,000');
     expect(all).toContain(`${data.balance.gameLengthYears} years`);
   });
 
