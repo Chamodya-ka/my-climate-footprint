@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "if [ -f package.json ]; then npm run build; else mkdir -p dist && cp index.html dist/; fi",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
+}
