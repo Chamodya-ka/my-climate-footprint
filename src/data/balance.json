@@ -1,0 +1,13 @@
+{
+  "startingBudget": 1000000,
+  "yearlyIncome": 50000,
+  "actionsPerTurn": 3,
+  "actionsPerMod": 1,
+  "actionsPerRepair": 1,
+  "minDamagePercent": 10,
+  "repairCostRate": 1.0,
+  "gameLengthYears": 10,
+  "startingFootprint": 6,
+  "baseYearlyIncrement": 0.5,
+  "source": "placeholder"
+}

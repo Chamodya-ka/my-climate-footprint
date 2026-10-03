@@ -1,0 +1,60 @@
+{
+  "width": 1600,
+  "height": 1000,
+  "regions": {
+    "coastal": {
+      "name": "Coastal",
+      "hazard": "Coastal flooding",
+      "x": 1105,
+      "y": 754,
+      "maskColor": [
+        245,
+        166,
+        80
+      ],
+      "tint": [
+        255,
+        178,
+        64
+      ]
+    },
+    "riverside": {
+      "name": "Riverside",
+      "hazard": "River and urban flooding",
+      "x": 984,
+      "y": 594,
+      "maskColor": [
+        90,
+        170,
+        245
+      ],
+      "tint": [
+        64,
+        170,
+        255
+      ]
+    },
+    "hillysides": {
+      "name": "Hillysides",
+      "hazard": "Landslips",
+      "x": 912,
+      "y": 381,
+      "maskColor": [
+        196,
+        120,
+        230
+      ],
+      "tint": [
+        205,
+        110,
+        245
+      ]
+    }
+  },
+  "landmarks": {
+    "townCentre": [
+      677.5684277936117,
+      429.0392398260777
+    ]
+  }
+}

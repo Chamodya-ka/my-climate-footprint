@@ -1,0 +1,161 @@
+{
+  "houses": [
+    {
+      "region": "coastal",
+      "tier": "Standard",
+      "name": "Seaside villa",
+      "price": 720000,
+      "bedrooms": 3,
+      "floorArea": 110,
+      "built": "1910s",
+      "floorHeight": 0.5,
+      "inspiredBy": "Petone and Ohiro Bay villas",
+      "blurb": "A classic weatherboard villa a short walk from the beach, on low piles.",
+      "id": "coastal_villa"
+    },
+    {
+      "region": "coastal",
+      "tier": "Luxury",
+      "name": "Restored double-bay villa",
+      "price": 1350000,
+      "bedrooms": 4,
+      "floorArea": 190,
+      "built": "1905, restored 2022",
+      "floorHeight": 0.6,
+      "inspiredBy": "Restored Petone villas",
+      "blurb": "Fully restored with twin bay windows, fretwork veranda and a sea breeze.",
+      "id": "coastal_villa_lux"
+    },
+    {
+      "region": "riverside",
+      "tier": "Standard",
+      "name": "1950s weatherboard bungalow",
+      "price": 650000,
+      "bedrooms": 3,
+      "floorArea": 95,
+      "built": "1955",
+      "floorHeight": 0.4,
+      "inspiredBy": "Lower Hutt state-house era bungalows",
+      "blurb": "Solid family home on a flat section, close to the river and the shops.",
+      "id": "riverside_bungalow"
+    },
+    {
+      "region": "riverside",
+      "tier": "Luxury",
+      "name": "Renovated bungalow with garage",
+      "price": 980000,
+      "bedrooms": 4,
+      "floorArea": 165,
+      "built": "1958, renovated 2020",
+      "floorHeight": 0.3,
+      "inspiredBy": "Renovated Lower Hutt bungalows",
+      "blurb": "Opened up with big sliders, a sunny deck and an internal garage.",
+      "id": "riverside_bungalow_lux"
+    },
+    {
+      "region": "riverside",
+      "tier": "Standard",
+      "name": "New-build townhouse",
+      "price": 595000,
+      "bedrooms": 2,
+      "floorArea": 88,
+      "built": "2023",
+      "floorHeight": 0.2,
+      "inspiredBy": "New townhouses around Hutt Central",
+      "blurb": "Low-maintenance and close to the train, but built on a slab at street level.",
+      "id": "riverside_townhouse"
+    },
+    {
+      "region": "riverside",
+      "tier": "Luxury",
+      "name": "Architect-designed townhouse",
+      "price": 890000,
+      "bedrooms": 3,
+      "floorArea": 150,
+      "built": "2024",
+      "floorHeight": 0.25,
+      "inspiredBy": "Modern Hutt Central townhouses",
+      "blurb": "Cedar and black cladding, glass balcony and a garage at street level.",
+      "id": "riverside_townhouse_lux"
+    },
+    {
+      "region": "hillysides",
+      "tier": "Standard",
+      "name": "Hillside weatherboard home",
+      "price": 560000,
+      "bedrooms": 3,
+      "floorArea": 100,
+      "built": "1962",
+      "floorHeight": 1.5,
+      "inspiredBy": "Naenae hillside homes",
+      "blurb": "Valley views from a house on timber piles, with a steep section behind.",
+      "id": "hillysides_house"
+    },
+    {
+      "region": "hillysides",
+      "tier": "Luxury",
+      "name": "Glass-and-concrete hillside house",
+      "price": 1250000,
+      "bedrooms": 4,
+      "floorArea": 210,
+      "built": "2019",
+      "floorHeight": 0.0,
+      "inspiredBy": "Modern homes cut into Hutt hillsides",
+      "blurb": "Two levels cut into the slope, with a glass pavilion and a wide terrace.",
+      "id": "hillysides_house_lux"
+    }
+  ],
+  "zones": {
+    "roof": {
+      "label": "Roof",
+      "maskColor": [
+        255,
+        59,
+        48
+      ],
+      "mods": [
+        "Solar panels"
+      ]
+    },
+    "door": {
+      "label": "Door",
+      "maskColor": [
+        255,
+        204,
+        0
+      ],
+      "mods": [
+        "Seal doors",
+        "Store food",
+        "Sandbags at house"
+      ]
+    },
+    "garden": {
+      "label": "Garden",
+      "maskColor": [
+        52,
+        199,
+        89
+      ],
+      "mods": [
+        "Retaining wall",
+        "Soil nailing",
+        "Planting trees",
+        "Drainage",
+        "Drainage over loose soil"
+      ]
+    },
+    "foundation": {
+      "label": "Foundation",
+      "maskColor": [
+        0,
+        122,
+        255
+      ],
+      "mods": [
+        "Foundation improvement",
+        "Elevate the house (stilts)"
+      ]
+    }
+  }
+}

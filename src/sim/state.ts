@@ -1,0 +1,144 @@
+import type { Area, Disaster, GameData, House, Mod, QuizQuestion } from '../data/schemas';
+
+export type Phase =
+  /** Picking a house: at game start, or after selling. */
+  | 'choosingHouse'
+  /** Spending actions on mods, repairs, or selling. */
+  | 'action'
+  /** Answering this year's "What would you do?" question. */
+  | 'quiz'
+  /** The weather has been rolled; the year review is showing. */
+  | 'review'
+  /** The game has ended; see `outcome`. */
+  | 'over';
+
+export type Outcome = 'won' | 'lost';
+
+export interface HouseState {
+  houseId: string;
+  /** Purchase price. House value never rises above this. */
+  originalValue: number;
+  value: number;
+  /** Permanent mod ids, each at most once. */
+  permanentMods: string[];
+  /** Consumable mod ids currently stocked, each at most once. */
+  consumables: string[];
+  destroyed: boolean;
+}
+
+export interface DisasterResult {
+  disaster: Disaster;
+  /** Chance of this disaster this year, in percent. */
+  chancePercent: number;
+  /** The seeded roll, 0–99. The disaster hits when roll < chancePercent. */
+  roll: number;
+  hit: boolean;
+  basePercent: number;
+  /** Damage as a percentage of original value after mods and the floor. 0 if no hit. */
+  effectivePercent: number;
+  valueLost: number;
+  valueAfter: number;
+  /** Mods (permanent and consumable) that reduced this hit. */
+  helpedBy: string[];
+  /** Consumables used up by this hit. */
+  consumablesUsed: string[];
+}
+
+export interface QuizChoice {
+  questionId: string;
+  answerId: string;
+  footprintDelta: number;
+}
+
+export interface MoveRecord {
+  fromHouseId: string;
+  saleValue: number;
+  toHouseId: string | null;
+}
+
+/** What the player did during this year's action phase. */
+export interface YearActions {
+  modsBuilt: string[];
+  repairs: { cost: number; valueRestored: number }[];
+  move: MoveRecord | null;
+}
+
+export interface YearRecord {
+  year: number;
+  houseId: string;
+  areaId: string;
+  actions: YearActions;
+  quiz: QuizChoice;
+  footprintBefore: number;
+  baseIncrement: number;
+  modFootprintDelta: number;
+  footprintAfter: number;
+  results: DisasterResult[];
+  destroyed: boolean;
+  bankAtEnd: number;
+  valueAtEnd: number;
+}
+
+/** The whole game, as one serialisable object. */
+export interface GameState {
+  seed: number;
+  /** RNG state; advanced only by the sim. */
+  rng: number;
+  phase: Phase;
+  /** 0 before the first house is bought, then 1..gameLengthYears. */
+  year: number;
+  bank: number;
+  actionsLeft: number;
+  /** Neighbourhood footprint in tonnes. Never below 0. */
+  footprint: number;
+  house: HouseState | null;
+  /** Set while moving: the house just sold, which can't be bought straight back. */
+  soldHouseId: string | null;
+  outcome: Outcome | null;
+  thisYear: YearActions;
+  history: YearRecord[];
+}
+
+/** Result of checking or performing a player intent. */
+export type Check = { ok: true } | { ok: false; reason: string };
+export type Result = { ok: true; state: GameState } | { ok: false; reason: string };
+
+export const OK: Check = { ok: true };
+export function fail(reason: string): { ok: false; reason: string } {
+  return { ok: false, reason };
+}
+
+export function emptyYearActions(): YearActions {
+  return { modsBuilt: [], repairs: [], move: null };
+}
+
+function byId<T extends { id: string }>(items: T[], id: string, kind: string): T {
+  const item = items.find((i) => i.id === id);
+  if (!item) throw new Error(`Unknown ${kind} id "${id}"`);
+  return item;
+}
+
+export const getHouse = (data: GameData, id: string): House => byId(data.houses, id, 'house');
+export const getArea = (data: GameData, id: string): Area => byId(data.areas, id, 'area');
+export const getMod = (data: GameData, id: string): Mod => byId(data.mods, id, 'mod');
+
+export function areaOfHouse(data: GameData, houseId: string): Area {
+  return getArea(data, getHouse(data, houseId).areaId);
+}
+
+/** The disasters the current house's area can roll. */
+export function disastersFor(data: GameData, house: HouseState): Disaster[] {
+  return areaOfHouse(data, house.houseId).disasters;
+}
+
+/** Mods currently in effect on a house: built permanent mods plus stocked consumables. */
+export function activeMods(data: GameData, house: HouseState): Mod[] {
+  return [...house.permanentMods, ...house.consumables].map((id) => getMod(data, id));
+}
+
+/** Questions cycle in order, one per year. */
+export function quizForYear(data: GameData, year: number): QuizQuestion {
+  const question = data.quiz[(year - 1) % data.quiz.length];
+  if (!question) throw new Error('quiz.json has no questions');
+  return question;
+}

@@ -1,162 +1,20 @@
 <!doctype html>
 <html lang="en-NZ">
   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>My Climate Footprint</title>
-    <meta
-      name="description"
-      content="A turn-based browser game about preparing a home for floods and landslides, set in a place inspired by Lower Hutt, Wellington. In development."
-    />
-    <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#0f1b24" />
-    <link
-      rel="icon"
-      href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌊</text></svg>"
-    />
-
     <style>
-      :root {
-        --bg: #f4f7f9;
-        --panel: #ffffff;
-        --fg: #10202b;
-        --muted: #4d6475;
-        --line: #d4dee5;
-        --accent: #0a6c8f;
-      }
-
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #0f1b24;
-          --panel: #16242f;
-          --fg: #f2f6f8;
-          --muted: #a4b8c5;
-          --line: #273b49;
-          --accent: #6fc8e8;
-        }
-      }
-
-      * {
-        box-sizing: border-box;
-      }
-
-      body {
-        margin: 0;
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem 1.25rem;
-        background: var(--bg);
-        color: var(--fg);
-        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-        font-size: 1rem;
-        line-height: 1.6;
-      }
-
-      main {
-        width: 100%;
-        max-width: 38rem;
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        padding: clamp(1.5rem, 5vw, 2.75rem);
-      }
-
-      .status {
-        display: inline-block;
-        margin: 0 0 1.25rem;
-        padding: 0.3rem 0.7rem;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        font-size: 0.8rem;
-        font-weight: 600;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
-        color: var(--muted);
-      }
-
-      h1 {
-        margin: 0 0 0.5rem;
-        font-size: clamp(1.75rem, 6vw, 2.5rem);
-        line-height: 1.2;
-      }
-
-      .tagline {
-        margin: 0 0 2rem;
-        font-size: 1.1rem;
-        color: var(--muted);
-      }
-
-      h2 {
-        margin: 0 0 0.75rem;
-        font-size: 0.8rem;
-        font-weight: 700;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: var(--muted);
-      }
-
-      ul {
-        margin: 0;
-        padding: 0;
-        list-style: none;
-        display: grid;
-        gap: 0.75rem;
-      }
-
-      li {
-        padding-left: 1.5rem;
-        position: relative;
-      }
-
-      li::before {
-        content: "→";
-        position: absolute;
-        left: 0;
-        color: var(--accent);
-        font-weight: 700;
-      }
-
-      footer {
-        margin-top: 2rem;
-        padding-top: 1.25rem;
-        border-top: 1px solid var(--line);
-        font-size: 0.9rem;
-        color: var(--muted);
-      }
-
-      footer p {
-        margin: 0;
-      }
+      html, body { margin: 0; height: 100%; background: #0f1b24; color: #f2f2f2; font-family: system-ui, sans-serif; }
+      #game { width: 100%; height: 100%; }
+      .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+      #fatal { display: none; padding: 24px; white-space: pre-wrap; font: 16px/1.5 monospace; background: #3a0d0d; }
     </style>
   </head>
-
   <body>
-    <main>
-      <p class="status">In development</p>
-
-      <h1>My Climate Footprint</h1>
-
-      <p class="tagline">
-        A turn-based browser game about floods and landslides. Buy a house, prepare it
-        with the actions and money you have, and live through the years of weather the
-        game rolls for you.
-      </p>
-
-      <h2>What you&rsquo;ll learn</h2>
-      <ul>
-        <li>Where you live determines which hazards you face.</li>
-        <li>Preparation reduces damage, but the right preparation depends on the hazard.</li>
-        <li>The neighbourhood&rsquo;s everyday choices change how often disasters happen.</li>
-      </ul>
-
-      <footer>
-        <p>
-          Set in a fictional region inspired by Lower Hutt, Wellington, Aotearoa New
-          Zealand. Check back soon &mdash; the game is being built now.
-        </p>
-      </footer>
-    </main>
+    <pre id="fatal" role="alert"></pre>
+    <div id="sr-live" class="sr-only" aria-live="polite"></div>
+    <div id="game"></div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

@@ -1,0 +1,114 @@
+{
+  "mods": [
+    {
+      "id": "seal-doors",
+      "name": "Seal doors",
+      "spot": "doors",
+      "type": "permanent",
+      "cost": 8000,
+      "reductions": { "flood": 20 },
+      "footprintDelta": 0,
+      "blurb": "Flood barriers and seals on doors and low vents keep shallow water out.",
+      "source": "placeholder"
+    },
+    {
+      "id": "elevate",
+      "name": "Elevate the house",
+      "spot": "foundations",
+      "type": "permanent",
+      "cost": 120000,
+      "reductions": { "flood": 30 },
+      "footprintDelta": 0,
+      "blurb": "Lift the floor above likely flood levels. Expensive, but very effective.",
+      "source": "placeholder"
+    },
+    {
+      "id": "foundation",
+      "name": "Foundation improvement",
+      "spot": "foundations",
+      "type": "permanent",
+      "cost": 40000,
+      "reductions": { "flood": 15 },
+      "footprintDelta": 0,
+      "blurb": "Strengthen and waterproof the foundations so floodwater does less harm.",
+      "source": "placeholder"
+    },
+    {
+      "id": "drainage",
+      "name": "Drainage",
+      "spot": "drains",
+      "type": "permanent",
+      "cost": 15000,
+      "reductions": { "flood": 15 },
+      "footprintDelta": 0,
+      "blurb": "Better drains and soak pits carry surface water away from the house.",
+      "source": "placeholder"
+    },
+    {
+      "id": "sandbags",
+      "name": "Sandbags at house",
+      "spot": "doors",
+      "type": "consumable",
+      "cost": 1000,
+      "reductions": { "flood": 5 },
+      "footprintDelta": 0,
+      "blurb": "A wall of sandbags at the doors. Used up when a flood hits.",
+      "source": "placeholder"
+    },
+    {
+      "id": "store-food",
+      "name": "Store food",
+      "spot": "inside",
+      "type": "consumable",
+      "cost": 1000,
+      "reductions": { "flood": 5, "landslide": 5 },
+      "footprintDelta": 0,
+      "blurb": "An emergency pantry lets you stay home safely and skip buying emergency supplies, which cuts recovery costs. It doesn't protect the building. Used up when a disaster hits.",
+      "source": "placeholder"
+    },
+    {
+      "id": "retaining-wall",
+      "name": "Retaining wall",
+      "spot": "slope",
+      "type": "permanent",
+      "cost": 60000,
+      "reductions": { "landslide": 50 },
+      "footprintDelta": 0,
+      "blurb": "An engineered wall holds back the bank behind the house.",
+      "source": "placeholder"
+    },
+    {
+      "id": "soil-nailing",
+      "name": "Soil nailing",
+      "spot": "slope",
+      "type": "permanent",
+      "cost": 45000,
+      "reductions": { "landslide": 20 },
+      "footprintDelta": 0,
+      "blurb": "Steel bars drilled into the slope pin loose soil in place.",
+      "source": "placeholder"
+    },
+    {
+      "id": "plant-trees",
+      "name": "Planting trees",
+      "spot": "garden",
+      "type": "permanent",
+      "cost": 3000,
+      "reductions": { "landslide": 10 },
+      "footprintDelta": -0.2,
+      "blurb": "Deep roots bind the soil, and growing trees take in carbon.",
+      "source": "placeholder"
+    },
+    {
+      "id": "drainage-loose-soil",
+      "name": "Drainage over loose soil",
+      "spot": "slope",
+      "type": "permanent",
+      "cost": 12000,
+      "reductions": { "landslide": 5 },
+      "footprintDelta": 0,
+      "blurb": "Drains on the slope stop rain soaking in and loosening the ground.",
+      "source": "placeholder"
+    }
+  ]
+}

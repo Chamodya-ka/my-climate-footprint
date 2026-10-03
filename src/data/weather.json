@@ -1,0 +1,11 @@
+{
+  "bands": [
+    { "min": 0,  "max": 4,  "odds": { "flood": 10, "landslide": 10 } },
+    { "min": 4,  "max": 8,  "odds": { "flood": 20, "landslide": 15 } },
+    { "min": 8,  "max": 12, "odds": { "flood": 30, "landslide": 20 } },
+    { "min": 12, "max": 16, "odds": { "flood": 50, "landslide": 30 } },
+    { "min": 16, "max": 20, "odds": { "flood": 75, "landslide": 40 } }
+  ],
+  "baseDamagePercent": { "flood": 40, "landslide": 50 },
+  "source": "Game-design numbers set by the team (not real-world probabilities)"
+}

@@ -2,9 +2,9 @@
 
 ## Project
 
-A turn-based 2D browser game that builds awareness of climate-driven floods and landslides. The setting is inspired by Lower Hutt, Wellington, New Zealand. The player buys a house, prepares it within limited actions and money, and lives through years of weather rolled by the game.
+A 2D browser game that builds awareness of climate-driven floods and landslides. The setting is inspired by Lower Hutt, Wellington, New Zealand. The player buys a house, prepares it within limited actions and money, and lives through years of weather rolled by the game.
 
-**Audience:** residents and prospective homeowners. Assume no prior hazard knowledge. Renters are out of scope.
+**Audience:** residents and prospective homeowners. 
 
 **Learning goals.** Every feature should serve at least one of these:
 1. Where you live determines which hazards you face.
@@ -16,15 +16,17 @@ A turn-based 2D browser game that builds awareness of climate-driven floods and 
 - TypeScript (strict), Vite, Phaser (2D), Vitest for tests, zod for validating data files.
 - Static site with no backend.
 
-Commands, once scaffolded:
+Commands:
 
 ```
 npm install
-npm run dev      # local dev server
-npm run build    # production build to dist/
+npm run dev      # local dev server (http://127.0.0.1:5173)
+npm run build    # typecheck + production build to dist/
 npm test         # Vitest
-npm run lint
+npm run lint     # ESLint + typecheck
 ```
+
+Versions: Phaser 4, Vite 8, Vitest 5, zod 4. TypeScript is pinned to 6.0 because typescript-eslint doesn't support TypeScript 7 yet.
 
 ## Architecture rules
 
@@ -37,15 +39,23 @@ npm run lint
 - **No magic numbers in code.** Every number in this file lives in `src/data/*.json`, so designers can rebalance without touching code.
 - Use a seeded RNG passed through the sim. Never call `Math.random` inside `src/sim/`.
 - Game state is one serialisable object.
+- Every player intent has a `check*` function (used to disable buttons and explain why) and an action that returns a new state. Scenes send results through `session.apply()`; they never change state themselves.
+- Player-facing text built from state lives in `src/ui/copy.ts` (pure, no Phaser), so the framing rules are kept in one place.
+- ESLint forbids Phaser imports and `Math.random` inside `src/sim/`.
 
 ```
 src/
-  sim/        state.ts, turn.ts, weather.ts, damage.ts, footprint.ts, economy.ts, rng.ts
+  main.ts     Phaser game config
+  session.ts  holds the current GameData and GameState; scenes apply sim results here
+  devtools.ts dev-only console/test helpers (window.dev), never in production builds
+  sim/        state.ts, turn.ts, weather.ts, damage.ts, footprint.ts, economy.ts, rng.ts,
+              advice.ts (what helped / would have helped), format.ts, *.test.ts
   scenes/     Boot, Title, RegionSelect, HouseSelect, House, Quiz, Roll, YearReview, FinalReport
-  ui/         HUD, buttons, panels
-  data/       areas.json, houses.json, weather.json, mods.json, quiz.json, balance.json, schemas.ts
-assets/       sprites, audio, LICENSES.md
-tools/blender/house_sprites.py
+  ui/         HUD, buttons (Button + FocusNav), panels, houseArt, copy, theme, a11y, icons, spots,
+              regionMap + mapView + mapMarkers (the valley map)
+  data/       areas.json, houses.json, weather.json, mods.json, quiz.json, balance.json, schemas.ts, index.ts
+assets/       map (valley map art + cartoon2.py), sprites, audio, LICENSES.md
+tools/blender/house_sprites.py   (placeholder; houses are drawn in code for now)
 ```
 
 ## Game flow
@@ -166,7 +176,7 @@ Rules for mods:
 - "Drainage" and "Drainage over loose soil" are separate mods with separate IDs.
 - **Diminishing returns.** Once a house reaches the 10% floor for its disaster, further mods for that disaster add nothing.
   - Example: seal doors plus elevating already gives 40 − 50 → 10% for floods.
-  - The House view must show the current "damage if hit" % so players see the floor coming.
+  - The House view must show the current "damage if hit" % so players see the floor coming. TODO: since the House view was simplified it isn't shown there (or in the HUD); it appears only in the year review, and upgrade tooltips say when the floor has been reached.
   - Don't block extra mods. Instead, the mod's tooltip should say it won't reduce damage further.
 - Mods stay with the house when it is sold. The player starts fresh in the new house.
 
@@ -228,9 +238,26 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
   - Do not add appreciation, market trends or value bonuses from mods.
 - **Selling:**
   - The player receives the current value.
-  - Selling plus buying uses the whole turn (default, pending open question 3).
+  - Selling plus buying uses the whole turn (default, pending open question 3). After moving, actions are 0 and the player can't sell again that year.
+  - The player can't buy back the house they just sold.
   - Only allow selling if the bank plus the sale value can afford at least one other house. Otherwise the player could end up homeless, a state the game has no rules for.
-- **HUD:** bank, house value (shown against original value, with a damaged/repaired status and hits left before destruction), neighbourhood footprint, actions left, this year's odds for the area's disaster, and damage if hit.
+- **HUD** (`src/ui/HUD.ts`, shown on the RegionSelect, HouseSelect, House, Quiz, Roll and YearReview screens):
+  - Top left box: neighbourhood footprint.
+  - Top centre, no box: "Year N of M" in large white text with a dark outline. Hidden in year 0 (before the first house is bought).
+  - Top right box: bank, house value (current dollar value only), total repair cost (the cost to repair the house fully right now; $0 when undamaged). With no house (choosing or moving), just the bank. `drawHUD()` returns the box's bottom edge (`rightBottom`) so side panels can sit below it.
+  - Not in the HUD: odds (shown in the Roll panel and year review), actions left (in upgrade windows only), damage if hit and hits left (year review only).
+
+## Screen layout
+
+- **House, Quiz, Roll, YearReview:** the player's house is drawn full screen as the background (`FULL_SCREEN_ART` / `drawBackdrop` in `src/ui/houseArt.ts`). Content sits along the bottom, so the house stays visible above it.
+  - House: round "+" markers on the house open upgrade windows, one per spot (doors, foundations, drains, inside, garden, slope). Each mod's `spot` in `mods.json` decides its marker; positions come from `spotPositions()` in `houseArt.ts`. Markers have no text label; the spot name and upgrades in place (e.g. "Doors upgrades, 1/2 in place") are announced to screen readers on focus. The window is modal: it lists that spot's mods with tooltips; Escape, Close or clicking outside closes it, and it reopens after a purchase. Keep the House view minimal: no text panel, just single-line buttons (no subtext) tiled horizontally and centred along the bottom: "Repair the house" (only while the house is damaged; shown with ✕ if unaffordable, and the reason is announced on focus or click), "Sell and Move" and "Finish Upgrades" (ends the action phase and opens the quiz). Repair cost is in the HUD.
+  - Quiz: question, answers in two columns, and an explanation of the focused answer's footprint change.
+  - Roll: the year's odds, one die per disaster, then the continue button. The HUD and house show the pre-roll state until the dice land, so the result isn't spoiled.
+  - YearReview: Cause, Effect and What helped boxes side by side. The font shrinks if needed so the dock stays clear of the HUD.
+- **FinalReport:** stats in a left column, footprint chart and quiz choices in a right column, the house (or rubble) between them.
+- **RegionSelect:** the valley map (`assets/map`) fills the screen. Each region has a label (name and hazards, drawn from game data, not the labels baked into `cartoon_regions.png`). Hovering anywhere in a region highlights it and fills the info panel in the top-right corner, below the HUD's bank box; clicking anywhere in it, or its label, selects it.
+- **HouseSelect:** the map zooms to fit the chosen region left of a solid right-hand sidebar (bank box, then the house panel), then a pin drops in for each house (`houses.json` `map.x/y`, in map-image pixels). Choosing a pin shows a preview, details and "Buy for $X"; "Back to the map" returns to RegionSelect.
+- **Title:** plain dark background.
 
 ## Content and tone
 
@@ -241,8 +268,32 @@ Example entry in `quiz.json`. The deltas are placeholders until provided:
   - Game copy must not present placeholder values as real-world data.
 - **Accessibility:**
   - Never use colour as the only signal.
-  - All interactions work with a keyboard.
+  - All interactions work with a keyboard: Tab/Shift+Tab or arrow keys move focus, Enter/Space chooses. Don't show on-screen key instructions.
+  - Modal windows take over the keyboard (`FocusNav.enabled = false` on the main nav) and close on Escape.
+  - Focus is shown by a thick outline plus a ▶ marker; unavailable buttons show ✕ and dimmed text, and focusing one shows why it's unavailable.
+  - Only pointer movement moves focus, so a resting mouse can't steal keyboard focus when a screen opens.
+  - Focused text is mirrored to an aria-live region (`#sr-live`) for screen readers.
   - Text is readable at small sizes.
+
+## Map
+
+- `assets/map/cartoon_base.png` (art) and `cartoon_overlay.png` (region outlines; each region filled with its `tint`) are 1600×1000. `region_labels.json` gives each map region's label position and tint.
+- `areas.json` regions name their map shape with `mapRegion` (`coastal`, `riverside`, `hillysides`).
+- At boot, `buildRegionMap()` (`src/ui/regionMap.ts`) classifies every overlay pixel by nearest tint into a hit-test lookup, builds a highlight texture and bounding box per region, and fails loudly if a `mapRegion` is unknown or a house pin isn't inside its own region.
+- `MapView` (`src/ui/mapView.ts`) draws the map (cover-fit), zooms to a region and converts screen ↔ map pixels. Map labels and pins are in `src/ui/mapMarkers.ts`.
+- `assets/map/cartoon2.py` regenerates the map. It reads `terrain.npz` and `regions_mask.png`, which aren't in the repo, and has hard-coded output paths.
+
+## Phaser 4 notes
+
+- `GeometryMask` only works in the Canvas renderer. Keep particles inside an area with a `deathZone` instead.
+- Tweening a Rectangle's `height` doesn't redraw it. Tween `scaleY` instead.
+- The keyboard plugin can replay queued keydown events. `FocusNav` uses a plain `window` keydown listener instead.
+- Browsers pause `requestAnimationFrame` in background tabs, which freezes the game. `devtools.ts` steps the loop by hand while the tab is hidden, so scripted browser tests keep running.
+
+## Dev helpers
+
+In `npm run dev`, `window.dev` drives the game from the console or browser tests:
+`await dev.start(regionIndex, houseIndex)`, `await dev.endYear(answerIndex)`, `await dev.nextYear()`, `dev.click(label => ...)`, `dev.state()`.
 
 ## Hazard data sources
 
@@ -272,7 +323,8 @@ The odds and damage values above are game-design numbers set by the team. Hazard
 - **Value:** never exceeds the original value; the house is destroyed exactly when value reaches 0 or below (test 40% × 3 and 10% × 10).
 - **Consumables:** used up only when their disaster hits.
 - **Footprint:** quiz delta, mod deltas, never below 0, odds use the updated value.
-- **Outcome:** destruction ends the game as a loss immediately; surviving year N is a win; selling is blocked when no other house would be affordable.
+- **Outcome:** destruction ends the game as a loss immediately; surviving year N is a win; selling is blocked when no other house would be affordable or the player has already moved this year.
+- **Data:** the bundled data validates; a missing `source`, unknown area or gap between weather bands fails loudly.
 - **Determinism:** the same seed and same choices give the same game.
 
 ## Open questions

@@ -1,0 +1,132 @@
+{
+  "width": 1600,
+  "height": 1000,
+  "regions": {
+    "coastal": {
+      "crop": {
+        "x": 535.0,
+        "y": 408.1,
+        "w": 947.0,
+        "h": 591.9
+      },
+      "pins": [
+        {
+          "houseId": "coastal_villa_lux",
+          "mapX": 1203.0,
+          "mapY": 708.0,
+          "x": 1128.6,
+          "y": 506.7,
+          "spriteW": 136,
+          "spriteH": 102,
+          "anchorY": 0.89,
+          "contentTop": 0.255,
+          "tagBelow": false
+        },
+        {
+          "houseId": "coastal_villa",
+          "mapX": 897.0,
+          "mapY": 764.0,
+          "x": 611.6,
+          "y": 601.3,
+          "spriteW": 136,
+          "spriteH": 102,
+          "anchorY": 0.89,
+          "contentTop": 0.245,
+          "tagBelow": false
+        }
+      ]
+    },
+    "riverside": {
+      "crop": {
+        "x": 209.0,
+        "y": 122.0,
+        "w": 1048.0,
+        "h": 655.0
+      },
+      "pins": [
+        {
+          "houseId": "riverside_townhouse_lux",
+          "mapX": 818.0,
+          "mapY": 447.0,
+          "x": 929.8,
+          "y": 496.2,
+          "spriteW": 136,
+          "spriteH": 102,
+          "anchorY": 0.89,
+          "contentTop": 0.078,
+          "tagBelow": false
+        },
+        {
+          "houseId": "riverside_bungalow_lux",
+          "mapX": 1016.0,
+          "mapY": 551.0,
+          "x": 1232.1,
+          "y": 655.0,
+          "spriteW": 136,
+          "spriteH": 102,
+          "anchorY": 0.89,
+          "contentTop": 0.255,
+          "tagBelow": false
+        },
+        {
+          "houseId": "riverside_townhouse",
+          "mapX": 616.0,
+          "mapY": 555.0,
+          "x": 621.4,
+          "y": 661.1,
+          "spriteW": 136,
+          "spriteH": 102,
+          "anchorY": 0.89,
+          "contentTop": 0.147,
+          "tagBelow": false
+        },
+        {
+          "houseId": "riverside_bungalow",
+          "mapX": 1147.0,
+          "mapY": 625.0,
+          "x": 1432.1,
+          "y": 767.9,
+          "spriteW": 136,
+          "spriteH": 102,
+          "anchorY": 0.89,
+          "contentTop": 0.255,
+          "tagBelow": false
+        }
+      ]
+    },
+    "hillysides": {
+      "crop": {
+        "x": 133.0,
+        "y": 48.7,
+        "w": 1265.0,
+        "h": 790.6
+      },
+      "pins": [
+        {
+          "houseId": "hillysides_house_lux",
+          "mapX": 437.0,
+          "mapY": 164.0,
+          "x": 384.5,
+          "y": 145.8,
+          "spriteW": 136,
+          "spriteH": 102,
+          "anchorY": 0.89,
+          "contentTop": 0.206,
+          "tagBelow": true
+        },
+        {
+          "houseId": "hillysides_house",
+          "mapX": 714.0,
+          "mapY": 331.0,
+          "x": 734.9,
+          "y": 357.1,
+          "spriteW": 136,
+          "spriteH": 102,
+          "anchorY": 0.89,
+          "contentTop": 0.225,
+          "tagBelow": false
+        }
+      ]
+    }
+  }
+}
