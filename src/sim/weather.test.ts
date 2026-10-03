@@ -5,23 +5,23 @@ import { bandFor, oddsFor, rollDisaster } from './weather';
 describe('band lookup', () => {
   const w = data.weather;
   it.each([
-    [0, 10, 10],
-    [3.99, 10, 10],
-    [4, 20, 15],
-    [8, 30, 20],
-    [12, 50, 30],
-    [16, 75, 40],
-    [19.99, 75, 40],
-    [20, 75, 40],
-    [35, 75, 40],
-  ])('footprint %s t → flood %s%%, landslide %s%%', (footprint, flood, landslide) => {
-    expect(oddsFor(w, footprint, 'flood')).toBe(flood);
-    expect(oddsFor(w, footprint, 'landslide')).toBe(landslide);
+    [8, 20],
+    [8.49, 20],
+    [8.5, 35],
+    [9, 50],
+    [9.5, 75],
+    [10, 100],
+    [10.49, 100],
+    [10.5, 100],
+    [12, 100],
+  ])('footprint %s t → flood and landslide %s%%', (footprint, chance) => {
+    expect(oddsFor(w, footprint, 'flood')).toBe(chance);
+    expect(oddsFor(w, footprint, 'landslide')).toBe(chance);
   });
 
   it('bands include their lower bound and exclude their upper bound', () => {
-    expect(bandFor(w, 4).min).toBe(4);
-    expect(bandFor(w, 8).min).toBe(8);
+    expect(bandFor(w, 8.5).min).toBe(8.5);
+    expect(bandFor(w, 10).min).toBe(10);
   });
 });
 

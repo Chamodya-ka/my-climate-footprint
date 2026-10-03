@@ -5,7 +5,6 @@ import { Title } from './scenes/Title';
 import { RegionSelect } from './scenes/RegionSelect';
 import { HouseSelect } from './scenes/HouseSelect';
 import { HouseScene } from './scenes/House';
-import { Quiz } from './scenes/Quiz';
 import { Roll } from './scenes/Roll';
 import { YearReview } from './scenes/YearReview';
 import { FinalReport } from './scenes/FinalReport';
@@ -17,7 +16,7 @@ const game = new Phaser.Game({
   height: HEIGHT,
   backgroundColor: colours.bg,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-  scene: [Boot, Title, RegionSelect, HouseSelect, HouseScene, Quiz, Roll, YearReview, FinalReport],
+  scene: [Boot, Title, RegionSelect, HouseSelect, HouseScene, Roll, YearReview, FinalReport],
 });
 
 // Exposed in development only, for debugging and browser testing.

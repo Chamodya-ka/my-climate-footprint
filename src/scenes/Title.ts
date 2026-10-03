@@ -1,8 +1,9 @@
 import * as Phaser from 'phaser';
 import { newGame } from '../sim/turn';
-import { data, randomSeed, setState } from '../session';
+import { data, randomSeed, startNewGame } from '../session';
+import { playMenuMusic } from '../ui/audio';
 import { Button, FocusNav } from '../ui/buttons';
-import { PLACEHOLDER_NOTE } from '../ui/copy';
+import { lastCalendarYear, PLACEHOLDER_NOTE } from '../ui/copy';
 import { textBlock } from '../ui/panels';
 import { HEIGHT, text, WIDTH } from '../ui/theme';
 
@@ -13,6 +14,7 @@ export class Title extends Phaser.Scene {
 
   create(): void {
     const d = data();
+    playMenuMusic(this.game);
     this.add.text(WIDTH / 2, 150, 'My Climate Footprint', text.title).setOrigin(0.5);
     this.add.text(WIDTH / 2, 210, 'A game about floods, landslides and where you choose to live', text.h2).setOrigin(0.5);
     textBlock(
@@ -20,10 +22,10 @@ export class Title extends Phaser.Scene {
       WIDTH / 2 - 380,
       270,
       760,
-      `Buy a house in a valley-and-harbour city inspired by Lower Hutt. Each year you get ` +
+      `Buy a house in a valley-and-harbour city. Each year you get ` +
         `${d.balance.actionsPerTurn} actions to prepare or repair, then the weather is rolled. ` +
-        `Keep your house standing for ${d.balance.gameLengthYears} years.\n\n` +
-        `Your neighbourhood's everyday choices change its carbon footprint, and a bigger footprint ` +
+        `Keep your house standing from ${d.balance.startYear} to ${lastCalendarYear(d)}.\n\n` +
+        `Assume everyone makes the same everyday choices you do: together they change the carbon footprint, and a bigger footprint ` +
         `makes floods and landslides more likely.`,
     ).setAlign('center');
     const nav = new FocusNav(this);
@@ -32,7 +34,7 @@ export class Title extends Phaser.Scene {
         label: 'Start',
         fontSize: 26,
         onActivate: () => {
-          setState(newGame(d, randomSeed()));
+          startNewGame(newGame(d, randomSeed()));
           this.scene.start('RegionSelect');
         },
       }),

@@ -1,19 +1,46 @@
 /**
  * Player-facing text built from sim state. Pure functions (no Phaser) so the
  * framing rules can be checked in one place:
- * - talk about the neighbourhood's footprint, never one household causing a disaster;
+ * - talk about the carbon footprint as if everyone made the player's choices, never one household causing a disaster;
  * - every review covers cause → effect → what helped or would have helped;
  * - placeholder numbers are "game values", never real-world data.
  */
-import type { Area, Disaster, GameData, Mod } from '../data/schemas';
+import type { Area, Disaster, GameData, Mod, QuizQuestion } from '../data/schemas';
 import { bestMissingMod, modsThatDontFit } from '../sim/advice';
-import { damageIfHit, hitsLeft, modAddsNothing, modFitsArea, reductionFrom } from '../sim/damage';
+import { damageIfHit, hitsLeft, reductionFrom } from '../sim/damage';
 import { repairCost } from '../sim/economy';
 import { formatMoney, formatTonnes } from '../sim/format';
-import { getArea, getHouse, getMod, quizForYear, type GameState, type HouseState, type YearRecord } from '../sim/state';
+import {
+  getArea,
+  getHouse,
+  getMod,
+  quizForYear,
+  type DisasterResult,
+  type GameState,
+  type HouseState,
+  type YearRecord,
+} from '../sim/state';
+
+/** The calendar year shown for game year `year` (1-based), e.g. 2026. */
+export function calendarYear(data: GameData, year: number): number {
+  return data.balance.startYear + year - 1;
+}
+
+/** The calendar year the game ends in, e.g. 2035. */
+export function lastCalendarYear(data: GameData): number {
+  return calendarYear(data, data.balance.gameLengthYears);
+}
 
 export const DISASTER_NAME: Record<Disaster, string> = { flood: 'Flood', landslide: 'Landslide' };
 const lower = (d: Disaster) => DISASTER_NAME[d].toLowerCase();
+
+/** The line shown once the year has passed: each disaster that hit, or that none did. */
+export function yearVerdict(results: DisasterResult[]): string {
+  const hits = results.filter((r) => r.hit);
+  if (hits.length === 0) return 'You were lucky: there were no climate disasters this year.';
+  const names = listJoin(hits.map((r) => `a ${lower(r.disaster)}`));
+  return `Unfortunately, ${names} ${hits.length > 1 ? 'hit' : 'hits'} your home.`;
+}
 const plural = (d: Disaster) => `${lower(d)}s`;
 
 export function listJoin(items: string[]): string {
@@ -31,21 +58,16 @@ export function areaHazardLine(area: Area): string {
   return `Hazard: ${hazards}.${causes}`;
 }
 
-/** Tooltip for a mod in the House view. */
-export function modTooltip(data: GameData, house: HouseState, mod: Mod): string {
-  const effects = (Object.entries(mod.reductions) as [Disaster, number][])
-    .map(([d, n]) => `${DISASTER_NAME[d]} damage −${n} points`)
-    .join(', ');
-  const kind = mod.type === 'consumable' ? 'Consumable: used up when its disaster hits.' : 'Permanent: stays with this house.';
-  const lines = [mod.blurb, `${effects}. ${kind}`];
-  if (mod.footprintDelta !== 0) lines.push(`Neighbourhood footprint ${signedTonnes(mod.footprintDelta)} each year (game value).`);
-  const area = getArea(data, getHouse(data, house.houseId).areaId);
-  if (!modFitsArea(data, house, mod)) {
-    lines.push(`Note: ${area.name} faces ${listJoin(area.disasters.map(plural))}, so this won't reduce damage here.`);
-  } else if (modAddsNothing(data, house, mod)) {
-    lines.push(`Note: damage is already at the ${data.balance.minDamagePercent}% minimum, so this won't reduce it further.`);
-  }
-  return lines.join('\n');
+/**
+ * Tooltip for a mod in an upgrade window: what it is and whether it lasts.
+ * Deliberately says nothing about how much it reduces damage (players find that out in the year review).
+ */
+export function modTooltip(mod: Mod): string {
+  const kind =
+    mod.type === 'consumable'
+      ? 'Used up when its disaster hits; restock it afterwards. Adds nothing to the house value.'
+      : `Permanent: stays with this house and adds ${formatMoney(mod.cost)} to its value.`;
+  return `${mod.blurb}\n${kind}`;
 }
 
 /** "Damage if hit" for each of the area's disasters, e.g. "Flood 15%". */
@@ -61,7 +83,7 @@ function footprintCause(data: GameData, rec: YearRecord): string {
   parts.push(`the "${answer?.label ?? rec.quiz.answerId}" choice ${signedTonnes(rec.quiz.footprintDelta)}`);
   if (rec.modFootprintDelta !== 0) parts.push(`mods ${signedTonnes(rec.modFootprintDelta)}`);
   return (
-    `If your neighbourhood made choices like yours, its footprint went from ${formatTonnes(rec.footprintBefore)} ` +
+    `Assuming everyone made the same choices you did, the carbon footprint went from ${formatTonnes(rec.footprintBefore)} ` +
     `to ${formatTonnes(rec.footprintAfter)} (${parts.join(', ')}).`
   );
 }
@@ -117,7 +139,7 @@ export function yearReview(data: GameData, state: GameState, rec: YearRecord): R
         ` = ${r.effectivePercent}%`
       : `${r.effectivePercent}%`;
     effectLines.push(
-      `Damage: ${maths} of the original value${reductions.length ? '' : `, with no preparation for ${plural(r.disaster)}`}. ` +
+      `Damage: ${maths} of the house's full value${reductions.length ? '' : `, with no preparation for ${plural(r.disaster)}`}. ` +
         `The house lost ${formatMoney(r.valueLost)}.`,
     );
     if (r.consumablesUsed.length) {
@@ -135,8 +157,8 @@ export function yearReview(data: GameData, state: GameState, rec: YearRecord): R
   if (rec.destroyed) {
     effectLines.push('The damage added up: the house has been destroyed.');
   } else {
-    effectLines.push(`The house is worth ${formatMoney(house.value)} of its original ${formatMoney(house.originalValue)}.`);
-    if (house.value < house.originalValue) {
+    effectLines.push(`The house is worth ${formatMoney(house.value)} of its full ${formatMoney(house.fullValue)}.`);
+    if (house.value < house.fullValue) {
       const left = Math.min(...area.disasters.map((d) => hitsLeft(data, house, d)));
       effectLines.push(
         `Unrepaired, it can take ${left} more hit${left === 1 ? '' : 's'}. ` +
@@ -164,4 +186,73 @@ export function regionHazardLabel(data: GameData, regionId: string): string {
   const disasters = [...new Set(data.areas.filter((a) => a.regionId === regionId).flatMap((a) => a.disasters))];
   const text = listJoin(disasters.map(plural));
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+export interface QuizFeedback {
+  /** True when the answer has the lowest footprint change of the options (ties count). */
+  correct: boolean;
+  verdict: string;
+  /** What the choice does to the carbon footprint, in the "assuming everyone makes the same choice" framing. */
+  footprintLine: string;
+  /** The lowest-footprint answers. */
+  best: QuizQuestion['answers'];
+}
+
+/** Feedback shown after answering the year's question. */
+export function quizFeedback(question: QuizQuestion, answerId: string): QuizFeedback {
+  const chosen = question.answers.find((a) => a.id === answerId)!;
+  const lowest = Math.min(...question.answers.map((a) => a.footprintDelta));
+  const best = question.answers.filter((a) => a.footprintDelta === lowest);
+  const correct = chosen.footprintDelta === lowest;
+  // No tonne figures here: the HUD arrow and gauge show the change.
+  const change = chosen.footprintDelta < 0 ? 'go down' : chosen.footprintDelta > 0 ? 'go up' : 'stay the same';
+  return {
+    correct,
+    best,
+    verdict: correct
+      ? '✓ Good choice: the lowest-footprint option.'
+      : `✗ Not the best choice: ${listJoin(best.map((a) => `"${a.label}"`))} would be lower.`,
+    footprintLine: `Assuming everyone makes the same choice you do, the carbon footprint would ${change}.`,
+  };
+}
+
+export interface HudIntroStep {
+  key: 'footprint' | 'bank' | 'houseValue' | 'repairCost';
+  title: string;
+  body: string;
+}
+
+/** The short tour of the HUD boxes, shown at the start of a new game. */
+export function hudIntro(data: GameData): HudIntroStep[] {
+  const { startingBudget, yearlyIncome, actionsPerRepair } = data.balance;
+  return [
+    {
+      key: 'footprint',
+      title: 'Carbon footprint',
+      body:
+        'The carbon added each year, in tonnes, assuming everyone makes the same choices you do. ' +
+        'Everyday choices push it up or down, and a bigger footprint makes floods and landslides more likely.',
+    },
+    {
+      key: 'bank',
+      title: 'Bank',
+      body:
+        `Your money. You start with ${formatMoney(startingBudget)} and get ${formatMoney(yearlyIncome)} at the start of each year. ` +
+        `It pays for your house, upgrades and repairs, and can't go below $0.`,
+    },
+    {
+      key: 'houseValue',
+      title: 'House value',
+      body:
+        "What your house is worth. Each flood or landslide that hits takes a share of it, and if it falls to $0 the " +
+        "house is destroyed and the game ends. It's $0 until you buy a house.",
+    },
+    {
+      key: 'repairCost',
+      title: 'Total repair cost',
+      body:
+        `What it would cost to fix all the damage right now. Repairing takes ${actionsPerRepair} action and brings the house ` +
+        'back to full value, so each year you choose between repairing and preparing.',
+    },
+  ];
 }

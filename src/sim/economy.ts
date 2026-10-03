@@ -2,7 +2,7 @@ import type { GameData, House } from '../data/schemas';
 import type { HouseState } from './state';
 
 export function repairCost(data: GameData, house: HouseState): number {
-  return Math.round(data.balance.repairCostRate * (house.originalValue - house.value));
+  return Math.round(data.balance.repairCostRate * (house.fullValue - house.value));
 }
 
 /** Houses the player could move to: every house except the one they're leaving. */

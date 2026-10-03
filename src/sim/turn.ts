@@ -51,13 +51,13 @@ export function newGame(data: GameData, seed: number): GameState {
   };
 }
 
-/** Year start: income is added and actions reset. Mutates the (already cloned) state. */
+/** Year start: income is added, actions reset, and the year's question comes first. Mutates the (already cloned) state. */
 function startYear(s: GameState, data: GameData, year: number): void {
   s.year = year;
   s.bank += data.balance.yearlyIncome;
   s.actionsLeft = data.balance.actionsPerTurn;
   s.thisYear = emptyYearActions();
-  s.phase = 'action';
+  s.phase = 'quiz';
 }
 
 // ---------------------------------------------------------------- buying
@@ -80,7 +80,9 @@ export function buyHouse(state: GameState, data: GameData, houseId: string): Res
   s.bank -= house.price;
   s.house = {
     houseId,
-    originalValue: house.price,
+    purchasePrice: house.price,
+    fullValue: house.price,
+    unrepairedHits: 0,
     value: house.price,
     permanentMods: [],
     consumables: [],
@@ -137,8 +139,15 @@ export function applyMod(state: GameState, data: GameData, modId: string): Resul
   const mod = getMod(data, modId);
   s.bank -= mod.cost;
   s.actionsLeft -= data.balance.actionsPerMod;
-  if (mod.type === 'permanent') house.permanentMods.push(modId);
-  else house.consumables.push(modId);
+  if (mod.type === 'permanent') {
+    house.permanentMods.push(modId);
+    // A permanent upgrade adds its cost to the house's value (and its full value).
+    // Consumables add nothing: they get used up.
+    house.fullValue += mod.cost;
+    house.value += mod.cost;
+  } else {
+    house.consumables.push(modId);
+  }
   s.thisYear.modsBuilt.push(modId);
   return ok(s);
 }
@@ -147,7 +156,7 @@ export function checkRepair(state: GameState, data: GameData): Check {
   const phase = checkActionPhase(state);
   if (!phase.ok) return phase;
   const house = state.house as HouseState;
-  if (house.value >= house.originalValue) return fail("The house isn't damaged.");
+  if (house.value >= house.fullValue) return fail("The house isn't damaged.");
   const actions = checkActions(state, data.balance.actionsPerRepair);
   if (!actions.ok) return actions;
   const cost = repairCost(data, house);
@@ -161,10 +170,11 @@ export function repair(state: GameState, data: GameData): Result {
   const s = clone(state);
   const house = s.house as HouseState;
   const cost = repairCost(data, house);
-  s.thisYear.repairs.push({ cost, valueRestored: house.originalValue - house.value });
+  s.thisYear.repairs.push({ cost, valueRestored: house.fullValue - house.value });
   s.bank -= cost;
   s.actionsLeft -= data.balance.actionsPerRepair;
-  house.value = house.originalValue;
+  house.value = house.fullValue;
+  house.unrepairedHits = 0;
   return ok(s);
 }
 
@@ -198,19 +208,7 @@ export function sell(state: GameState, data: GameData): Result {
   return ok(s);
 }
 
-export function checkEndTurn(state: GameState): Check {
-  return checkActionPhase(state);
-}
-
-export function endTurn(state: GameState): Result {
-  const check = checkEndTurn(state);
-  if (!check.ok) return check;
-  const s = clone(state);
-  s.phase = 'quiz';
-  return ok(s);
-}
-
-// ---------------------------------------------------------------- resolution
+// ---------------------------------------------------------------- the year's question
 
 export function checkAnswerQuiz(state: GameState, data: GameData, answerId: string): Check {
   if (state.phase !== 'quiz') return fail('There is no question to answer right now.');
@@ -220,19 +218,42 @@ export function checkAnswerQuiz(state: GameState, data: GameData, answerId: stri
 }
 
 /**
- * Answers the quiz, then updates the footprint, rolls the weather, applies
- * damage and the end check. Produces a YearRecord and moves to the review.
+ * Answers the year's question at the start of the year. The answer is only
+ * recorded here; it changes the footprint when the year ends. Unlocks the action phase.
  */
 export function answerQuiz(state: GameState, data: GameData, answerId: string): Result {
   const check = checkAnswerQuiz(state, data, answerId);
   if (!check.ok) return check;
   const s = clone(state);
-  const house = s.house as HouseState;
   const question = quizForYear(data, s.year);
   const answer = question.answers.find((a) => a.id === answerId)!;
+  s.thisYear.quiz = { questionId: question.id, answerId, footprintDelta: answer.footprintDelta };
+  s.phase = 'action';
+  return ok(s);
+}
+
+// ---------------------------------------------------------------- resolution
+
+export function checkEndTurn(state: GameState): Check {
+  const phase = checkActionPhase(state);
+  if (!phase.ok) return phase;
+  if (!state.thisYear.quiz) return fail("Answer this year's question first.");
+  return OK;
+}
+
+/**
+ * Ends the year: updates the footprint with this year's answer, rolls the
+ * weather, applies damage and the end check. Produces a YearRecord and moves to the review.
+ */
+export function endTurn(state: GameState, data: GameData): Result {
+  const check = checkEndTurn(state);
+  if (!check.ok) return check;
+  const s = clone(state);
+  const house = s.house as HouseState;
+  const choice = s.thisYear.quiz!;
 
   const footprintBefore = s.footprint;
-  const change = nextFootprint(data, s.footprint, answer.footprintDelta, house);
+  const change = nextFootprint(data, s.footprint, choice.footprintDelta, house);
   s.footprint = change.after;
 
   const area = areaOfHouse(data, house.houseId);
@@ -256,9 +277,10 @@ export function answerQuiz(state: GameState, data: GameData, answerId: string): 
     };
     if (roll.hit && !house.destroyed) {
       const percent = damageIfHit(data, house, disaster);
-      const lost = valueLostFor(house.originalValue, percent);
+      const lost = valueLostFor(house.fullValue, percent);
       const protecting = activeMods(data, house).filter((m) => (m.reductions[disaster] ?? 0) > 0);
       house.value = Math.max(0, house.value - lost);
+      house.unrepairedHits += 1;
       house.destroyed = house.value <= 0;
       const used = protecting.filter((m) => m.type === 'consumable').map((m) => m.id);
       house.consumables = house.consumables.filter((id) => !used.includes(id));
@@ -281,7 +303,7 @@ export function answerQuiz(state: GameState, data: GameData, answerId: string): 
     houseId: house.houseId,
     areaId: area.id,
     actions: structuredClone(s.thisYear),
-    quiz: { questionId: question.id, answerId, footprintDelta: answer.footprintDelta },
+    quiz: choice,
     footprintBefore,
     baseIncrement: change.baseIncrement,
     modFootprintDelta: change.modDelta,

@@ -1,9 +1,11 @@
 import * as Phaser from 'phaser';
 import { formatMoney } from '../sim/format';
 import { getHouse } from '../sim/state';
-import { data, state } from '../session';
+import { data, state, takeHudTour } from '../session';
+import { playRegionMusic } from '../ui/audio';
 import { FocusNav } from '../ui/buttons';
-import { areaHazardLine, regionHazardLabel } from '../ui/copy';
+import { areaHazardLine, hudIntro, regionHazardLabel } from '../ui/copy';
+import { showCoachMarks } from '../ui/coachMarks';
 import { RegionLabel, rgbToNumber } from '../ui/mapMarkers';
 import { MapView } from '../ui/mapView';
 import { panel } from '../ui/panels';
@@ -53,11 +55,15 @@ export class RegionSelect extends Phaser.Scene {
       lineSpacing: 3,
       wordWrap: { width: inner },
     });
-    const bg = panel(this, px, top, PANEL_W, 10).setDepth(-1).setAlpha(0.95);
+    const bg = panel(this, px, top, PANEL_W, 10).setDepth(-1);
     const fitPanel = () => bg.setSize(PANEL_W, info.y + info.height + PAD - top);
     fitPanel();
+    const infoPanel = [bg, title, sub, info];
 
-    const select = (regionId: string) => this.scene.start('HouseSelect', { regionId });
+    const select = (regionId: string) => {
+      playRegionMusic(this.game, d.regions.find((r) => r.id === regionId)!.mapRegion);
+      this.scene.start('HouseSelect', { regionId });
+    };
     const nav = new FocusNav(this);
     const labelFor = new Map<string, RegionLabel>();
 
@@ -73,7 +79,7 @@ export class RegionSelect extends Phaser.Scene {
           info.setText(
             [
               `${region.name}: ${region.blurb}`,
-              ...areas.map((a) => `\n${a.name} (inspired by ${a.inspiredBy})\n${areaHazardLine(a)}`),
+              ...areas.map((a) => `\n${a.name}\n${areaHazardLine(a)}`),
               `\n${houses.length} house${houses.length === 1 ? '' : 's'} from ${formatMoney(cheapest)}`,
             ].join('\n'),
           );
@@ -85,13 +91,27 @@ export class RegionSelect extends Phaser.Scene {
       nav.add(label);
     }
 
+    // At the start of a new game, explain the HUD boxes before asking where to live.
+    let touring = false;
+    if (takeHudTour()) {
+      touring = true;
+      infoPanel.forEach((o) => o.setAlpha(0));
+      const steps = hudIntro(d).map((step) => ({ ...step, target: hud.rows[step.key] }));
+      showCoachMarks(this, steps, nav, () => {
+        touring = false;
+        this.tweens.add({ targets: infoPanel, alpha: 1, duration: 250 });
+      });
+    }
+
     // Anywhere inside a region works too, not just its label.
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
+      if (touring) return;
       const key = map.regionAt(p.x, p.y);
       const label = key ? labelFor.get(key) : undefined;
       if (label) nav.focus(label);
     });
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer, over: Phaser.GameObjects.GameObject[]) => {
+      if (touring) return;
       if (over.length > 0) return; // a label handles its own clicks
       const key = map.regionAt(p.x, p.y);
       const region = d.regions.find((r) => r.mapRegion === key);

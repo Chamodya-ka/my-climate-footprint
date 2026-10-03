@@ -3,19 +3,25 @@ export const WIDTH = 1280;
 export const HEIGHT = 720;
 export const MARGIN = 24;
 
+/*
+ * Text colours are chosen for WCAG AAA contrast (at least 7:1) on the panels and
+ * buttons they sit on; see the contrast table in CLAUDE.md before changing them.
+ */
 export const colours = {
-  bg: 0x0f1b24,
-  panel: 0x1b2d3a,
+  bg: 0x0b151c,
+  panel: 0x132430,
   panelEdge: 0x3c5a6e,
-  button: 0x24506b,
-  buttonDisabled: 0x2a3138,
+  button: 0x1b4058,
+  buttonDisabled: 0x252d34,
   focus: 0xffd166,
-  text: '#f2f2f2',
-  textDim: '#a9b7c2',
-  textDisabled: '#7d8790',
-  good: '#8fe3a6',
+  /** Text in the focus colour, e.g. the player's own choice. */
+  focusText: '#ffd166',
+  text: '#ffffff',
+  textDim: '#d3dde5',
+  textDisabled: '#b3bdc6',
+  good: '#9ff0b4',
   warn: '#ffd166',
-  bad: '#ff8f80',
+  bad: '#ffa89c',
   sky: 0x87b5d6,
   grass: 0x5e8c4a,
   water: 0x2f7dbf,

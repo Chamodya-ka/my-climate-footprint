@@ -1,0 +1,467 @@
+{
+  "houses": [
+    {
+      "region": "coastal",
+      "tier": "Standard",
+      "name": "Seaside villa",
+      "price": 720000,
+      "bedrooms": 3,
+      "floorArea": 110,
+      "built": "1910s",
+      "floorHeight": 0.5,
+      "inspiredBy": "Petone and Ohiro Bay villas",
+      "blurb": "A classic weatherboard villa a short walk from the beach, on low piles.",
+      "id": "coastal_villa",
+      "plus": {
+        "roof": [
+          169.5,
+          195.5
+        ],
+        "door": [
+          224.5,
+          273.5
+        ],
+        "foundation": [
+          337.5,
+          340.0
+        ],
+        "garden": [
+          67.0,
+          393.5
+        ]
+      },
+      "damage": {
+        "kind": "flood",
+        "levels": {
+          "1": "sprites/coastal_villa_dmg1.png",
+          "2": "sprites/coastal_villa_dmg2.png"
+        }
+      },
+      "backgrounds": {
+        "normal": "bg/coastal_villa_normal.png",
+        "post": "bg/coastal_villa_post.png",
+        "postForeground": "bg/coastal_villa_post_fg.png"
+      }
+    },
+    {
+      "region": "coastal",
+      "tier": "Luxury",
+      "name": "Restored double-bay villa",
+      "price": 1350000,
+      "bedrooms": 4,
+      "floorArea": 190,
+      "built": "1905, restored 2022",
+      "floorHeight": 0.6,
+      "inspiredBy": "Restored Petone villas",
+      "blurb": "Fully restored with twin bay windows, fretwork veranda and a sea breeze.",
+      "id": "coastal_villa_lux",
+      "plus": {
+        "roof": [
+          247.5,
+          196.5
+        ],
+        "door": [
+          300.0,
+          337.5
+        ],
+        "foundation": [
+          519.0,
+          340.0
+        ],
+        "garden": [
+          66.5,
+          394.0
+        ]
+      },
+      "damage": {
+        "kind": "flood",
+        "levels": {
+          "1": "sprites/coastal_villa_lux_dmg1.png",
+          "2": "sprites/coastal_villa_lux_dmg2.png"
+        }
+      },
+      "backgrounds": {
+        "normal": "bg/coastal_villa_lux_normal.png",
+        "post": "bg/coastal_villa_lux_post.png",
+        "postForeground": "bg/coastal_villa_lux_post_fg.png"
+      }
+    },
+    {
+      "region": "riverside",
+      "tier": "Standard",
+      "name": "1950s weatherboard bungalow",
+      "price": 650000,
+      "bedrooms": 3,
+      "floorArea": 95,
+      "built": "1955",
+      "floorHeight": 0.4,
+      "inspiredBy": "Lower Hutt state-house era bungalows",
+      "blurb": "Solid family home on a flat section, close to the river and the shops.",
+      "id": "riverside_bungalow",
+      "plus": {
+        "roof": [
+          208.0,
+          202.5
+        ],
+        "door": [
+          300.5,
+          332.0
+        ],
+        "foundation": [
+          187.5,
+          340.0
+        ],
+        "garden": [
+          76.5,
+          385.5
+        ]
+      },
+      "damage": {
+        "kind": "flood",
+        "levels": {
+          "1": "sprites/riverside_bungalow_dmg1.png",
+          "2": "sprites/riverside_bungalow_dmg2.png"
+        }
+      },
+      "backgrounds": {
+        "normal": "bg/riverside_bungalow_normal.png",
+        "post": "bg/riverside_bungalow_post.png",
+        "postForeground": "bg/riverside_bungalow_post_fg.png"
+      }
+    },
+    {
+      "region": "riverside",
+      "tier": "Luxury",
+      "name": "Renovated bungalow with garage",
+      "price": 980000,
+      "bedrooms": 4,
+      "floorArea": 165,
+      "built": "1958, renovated 2020",
+      "floorHeight": 0.3,
+      "inspiredBy": "Renovated Lower Hutt bungalows",
+      "blurb": "Opened up with big sliders, a sunny deck and an internal garage.",
+      "id": "riverside_bungalow_lux",
+      "plus": {
+        "roof": [
+          173.0,
+          202.5
+        ],
+        "door": [
+          368.5,
+          272.5
+        ],
+        "foundation": [
+          420.5,
+          340.0
+        ],
+        "garden": [
+          67.5,
+          393.5
+        ]
+      },
+      "damage": {
+        "kind": "flood",
+        "levels": {
+          "1": "sprites/riverside_bungalow_lux_dmg1.png",
+          "2": "sprites/riverside_bungalow_lux_dmg2.png"
+        }
+      },
+      "backgrounds": {
+        "normal": "bg/riverside_bungalow_lux_normal.png",
+        "post": "bg/riverside_bungalow_lux_post.png",
+        "postForeground": "bg/riverside_bungalow_lux_post_fg.png"
+      }
+    },
+    {
+      "region": "riverside",
+      "tier": "Standard",
+      "name": "New-build townhouse",
+      "price": 595000,
+      "bedrooms": 2,
+      "floorArea": 88,
+      "built": "2023",
+      "floorHeight": 0.2,
+      "inspiredBy": "New townhouses around Hutt Central",
+      "blurb": "Low-maintenance and close to the train, but built on a slab at street level.",
+      "id": "riverside_townhouse",
+      "plus": {
+        "roof": [
+          289.5,
+          89.0
+        ],
+        "door": [
+          321.5,
+          268.0
+        ],
+        "foundation": [
+          199.0,
+          342.0
+        ],
+        "garden": [
+          67.0,
+          393.5
+        ]
+      },
+      "damage": {
+        "kind": "flood",
+        "levels": {
+          "1": "sprites/riverside_townhouse_dmg1.png",
+          "2": "sprites/riverside_townhouse_dmg2.png"
+        }
+      },
+      "backgrounds": {
+        "normal": "bg/riverside_townhouse_normal.png",
+        "post": "bg/riverside_townhouse_post.png",
+        "postForeground": "bg/riverside_townhouse_post_fg.png"
+      }
+    },
+    {
+      "region": "riverside",
+      "tier": "Luxury",
+      "name": "Architect-designed townhouse",
+      "price": 890000,
+      "bedrooms": 3,
+      "floorArea": 150,
+      "built": "2024",
+      "floorHeight": 0.25,
+      "inspiredBy": "Modern Hutt Central townhouses",
+      "blurb": "Cedar and black cladding, glass balcony and a garage at street level.",
+      "id": "riverside_townhouse_lux",
+      "plus": {
+        "roof": [
+          414.0,
+          143.5
+        ],
+        "door": [
+          368.5,
+          279.0
+        ],
+        "foundation": [
+          169.0,
+          342.0
+        ],
+        "garden": [
+          87.0,
+          389.0
+        ]
+      },
+      "damage": {
+        "kind": "flood",
+        "levels": {
+          "1": "sprites/riverside_townhouse_lux_dmg1.png",
+          "2": "sprites/riverside_townhouse_lux_dmg2.png"
+        }
+      },
+      "backgrounds": {
+        "normal": "bg/riverside_townhouse_lux_normal.png",
+        "post": "bg/riverside_townhouse_lux_post.png",
+        "postForeground": "bg/riverside_townhouse_lux_post_fg.png"
+      }
+    },
+    {
+      "region": "hillysides",
+      "tier": "Standard",
+      "name": "Hillside weatherboard home",
+      "price": 560000,
+      "bedrooms": 3,
+      "floorArea": 100,
+      "built": "1962",
+      "floorHeight": 1.5,
+      "inspiredBy": "Naenae hillside homes",
+      "blurb": "Valley views from a house on timber piles, with a steep section behind.",
+      "id": "hillysides_house",
+      "plus": {
+        "roof": [
+          240.0,
+          145.5
+        ],
+        "door": [
+          391.5,
+          209.5
+        ],
+        "foundation": [
+          314.0,
+          270.0
+        ],
+        "garden": [
+          117.5,
+          341.5
+        ]
+      },
+      "damage": {
+        "kind": "landslip",
+        "levels": {
+          "1": "sprites/hillysides_house_dmg1.png",
+          "2": "sprites/hillysides_house_dmg2.png"
+        }
+      },
+      "backgrounds": {
+        "normal": "bg/hillysides_house_normal.png",
+        "post": "bg/hillysides_house_post.png"
+      },
+      "slipPath": [
+        [
+          48.0,
+          477.0
+        ],
+        [
+          223.5,
+          510.4
+        ],
+        [
+          424.0,
+          539.7
+        ],
+        [
+          612.0,
+          598.2
+        ],
+        [
+          841.8,
+          681.7
+        ],
+        [
+          1050.7,
+          748.6
+        ],
+        [
+          1155.1,
+          761.1
+        ]
+      ]
+    },
+    {
+      "region": "hillysides",
+      "tier": "Luxury",
+      "name": "Glass-and-concrete hillside house",
+      "price": 1250000,
+      "bedrooms": 4,
+      "floorArea": 210,
+      "built": "2019",
+      "floorHeight": 0.0,
+      "inspiredBy": "Modern homes cut into Hutt hillsides",
+      "blurb": "Two levels cut into the slope, with a glass pavilion and a wide terrace.",
+      "id": "hillysides_house_lux",
+      "plus": {
+        "roof": [
+          145.0,
+          159.0
+        ],
+        "door": [
+          324.5,
+          316.5
+        ],
+        "foundation": [
+          236.0,
+          367.0
+        ],
+        "garden": [
+          108.5,
+          351.0
+        ]
+      },
+      "damage": {
+        "kind": "landslip",
+        "levels": {
+          "1": "sprites/hillysides_house_lux_dmg1.png",
+          "2": "sprites/hillysides_house_lux_dmg2.png"
+        }
+      },
+      "backgrounds": {
+        "normal": "bg/hillysides_house_lux_normal.png",
+        "post": "bg/hillysides_house_lux_post.png"
+      },
+      "slipPath": [
+        [
+          48.0,
+          418.5
+        ],
+        [
+          223.5,
+          439.4
+        ],
+        [
+          361.3,
+          456.1
+        ],
+        [
+          486.7,
+          502.1
+        ],
+        [
+          620.4,
+          577.3
+        ],
+        [
+          662.1,
+          623.2
+        ],
+        [
+          683.0,
+          765.3
+        ],
+        [
+          779.1,
+          786.2
+        ],
+        [
+          862.7,
+          790.4
+        ]
+      ]
+    }
+  ],
+  "zones": {
+    "roof": {
+      "label": "Roof",
+      "maskColor": [
+        255,
+        59,
+        48
+      ],
+      "mods": [
+        "Solar panels"
+      ]
+    },
+    "door": {
+      "label": "Door",
+      "maskColor": [
+        255,
+        204,
+        0
+      ],
+      "mods": [
+        "Seal doors",
+        "Store food",
+        "Sandbags at house"
+      ]
+    },
+    "garden": {
+      "label": "Garden",
+      "maskColor": [
+        52,
+        199,
+        89
+      ],
+      "mods": [
+        "Retaining wall",
+        "Soil nailing",
+        "Planting trees",
+        "Drainage",
+        "Drainage over loose soil"
+      ]
+    },
+    "foundation": {
+      "label": "Foundation",
+      "maskColor": [
+        0,
+        122,
+        255
+      ],
+      "mods": [
+        "Foundation improvement",
+        "Elevate the house (stilts)"
+      ]
+    }
+  }
+}

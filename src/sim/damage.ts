@@ -18,14 +18,14 @@ export function damageIfHit(data: GameData, house: HouseState, disaster: Disaste
   return effectivePercent(data, disaster, activeMods(data, house));
 }
 
-export function valueLostFor(originalValue: number, percent: number): number {
-  return Math.round((originalValue * percent) / PERCENT);
+export function valueLostFor(fullValue: number, percent: number): number {
+  return Math.round((fullValue * percent) / PERCENT);
 }
 
 /** How many more hits of this disaster the house can take before it is destroyed. */
 export function hitsLeft(data: GameData, house: HouseState, disaster: Disaster): number {
   if (house.destroyed) return 0;
-  const perHit = valueLostFor(house.originalValue, damageIfHit(data, house, disaster));
+  const perHit = valueLostFor(house.fullValue, damageIfHit(data, house, disaster));
   return Math.ceil(house.value / perHit);
 }
 

@@ -129,15 +129,6 @@ export function buildRegionMap(scene: Phaser.Scene, data: GameData): void {
 
   regionMap = { labels, width, height, keys, lookup, bbox };
 
-  // Every house pin must sit inside its own region's shape.
-  for (const house of data.houses) {
-    const area = data.areas.find((a) => a.id === house.areaId);
-    const region = data.regions.find((r) => r.id === area?.regionId);
-    const at = regionAtMap(house.map.x, house.map.y);
-    if (region && at !== region.mapRegion) {
-      problems.push(`houses.json: "${house.id}" pin (${house.map.x}, ${house.map.y}) is in map region "${at ?? 'none'}", not "${region.mapRegion}"`);
-    }
-  }
   if (problems.length) throw new Error(`Map data doesn't match the game data:\n- ${problems.join('\n- ')}`);
 }
 

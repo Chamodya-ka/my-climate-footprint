@@ -1,12 +1,12 @@
 import * as Phaser from 'phaser';
 import { allModsBuilt, disastersFaced, totalRepairs, whatWouldHaveHelped } from '../sim/advice';
 import { formatMoney, formatTonnes } from '../sim/format';
-import { getMod } from '../sim/state';
+import { getHouse, getMod } from '../sim/state';
 import { data, state } from '../session';
 import { Button, FocusNav } from '../ui/buttons';
 import { announce } from '../ui/a11y';
-import { DISASTER_NAME, PLACEHOLDER_NOTE, signedTonnes } from '../ui/copy';
-import { drawBackdrop } from '../ui/houseArt';
+import { calendarYear, DISASTER_NAME, lastCalendarYear, PLACEHOLDER_NOTE, signedTonnes } from '../ui/copy';
+import { drawHouseScene } from '../ui/houseArt';
 import { panel, textBlock } from '../ui/panels';
 import { colours, FONT, HEIGHT, text, WIDTH } from '../ui/theme';
 
@@ -23,10 +23,19 @@ export class FinalReport extends Phaser.Scene {
     const won = s.outcome === 'won';
     const survived = won ? s.year : s.year - 1;
     // The house (standing or in ruins) fills the screen between the two report columns.
-    drawBackdrop(this, d, s.house);
     const colW = 440;
     const leftX = EDGE;
     const rightX = WIDTH - EDGE - colW;
+    if (s.house) {
+      // The house (or what's left of it) fills the gap between the two columns.
+      const gapX = leftX + colW;
+      drawHouseScene(this, d, getHouse(d, s.house.houseId), s.house, {
+        x: gapX,
+        y: 0,
+        w: rightX - gapX,
+        h: HEIGHT,
+      }).setDepth(-10);
+    }
     const top = EDGE;
     const colH = HEIGHT - EDGE * 2;
     panel(this, leftX, top, colW, colH);
@@ -36,7 +45,9 @@ export class FinalReport extends Phaser.Scene {
       leftX + 16,
       top + 14,
       colW - 32,
-      won ? `You made it: ${s.year} years, house still standing` : `Game over: the house was destroyed in year ${s.year}`,
+      won
+        ? `You made it to ${lastCalendarYear(d)}, house still standing`
+        : `Game over: the house was destroyed in ${calendarYear(d, s.year)}`,
       { ...text.h2, fontSize: '26px' },
     );
 
@@ -50,7 +61,7 @@ export class FinalReport extends Phaser.Scene {
       `Mods built: ${mods.length ? mods.map((id) => getMod(d, id).name).join(', ') : 'none'}`,
       '',
       `Disasters faced: ${faced.length || 'none'}`,
-      ...faced.map((f) => `  Year ${f.year}: ${DISASTER_NAME[f.disaster]}, ${f.percent}% damage (${formatMoney(f.valueLost)})`),
+      ...faced.map((f) => `  ${calendarYear(d, f.year)}: ${DISASTER_NAME[f.disaster]}, ${f.percent}% damage (${formatMoney(f.valueLost)})`),
     ];
     const advice = whatWouldHaveHelped(d, s);
     if (advice.length) {
@@ -67,35 +78,36 @@ export class FinalReport extends Phaser.Scene {
     textBlock(this, leftX + 16, top + 14 + title.height + 14, colW - 32, lines.join('\n'), { ...text.body, fontSize: '17px', lineSpacing: 4 });
 
     // Footprint trend: a simple line chart plus the choices that drove it.
-    this.add.text(rightX + 16, top + 14, 'Neighbourhood footprint', text.h2);
+    this.add.text(rightX + 16, top + 14, 'Carbon footprint', text.h2);
     const chart = { x: rightX + 60, y: top + 60, w: colW - 90, h: 170 };
     const points = [{ year: 0, t: s.history[0]?.footprintBefore ?? s.footprint }, ...s.history.map((h) => ({ year: h.year, t: h.footprintAfter }))];
-    const maxBand = d.weather.bands[d.weather.bands.length - 1]!.max;
-    const maxT = Math.max(maxBand, ...points.map((p) => p.t));
+    // Same range as the HUD gauge, stretched if the footprint went past it.
+    const minT = d.balance.minFootprint;
+    const maxT = Math.max(d.balance.footprintGaugeMax, ...points.map((p) => p.t));
+    const yFor = (t: number) => chart.y + chart.h - ((t - minT) / (maxT - minT)) * chart.h;
     const g = this.add.graphics();
     // Band gridlines, labelled, so the chart reads without colour.
     for (const band of d.weather.bands) {
-      const by = chart.y + chart.h - (band.min / maxT) * chart.h;
+      const by = yFor(band.min);
       g.lineStyle(1, colours.panelEdge).lineBetween(chart.x, by, chart.x + chart.w, by);
       this.add.text(chart.x - 8, by, `${band.min}t`, { fontFamily: FONT, fontSize: '13px', color: colours.textDim }).setOrigin(1, 0.5);
     }
     this.add.text(chart.x - 8, chart.y, `${maxT}t`, { fontFamily: FONT, fontSize: '13px', color: colours.textDim }).setOrigin(1, 0.5);
     g.lineStyle(1, colours.panelEdge).lineBetween(chart.x, chart.y, chart.x + chart.w, chart.y);
     const xFor = (year: number) => chart.x + (year / Math.max(1, d.balance.gameLengthYears)) * chart.w;
-    const yFor = (t: number) => chart.y + chart.h - (t / maxT) * chart.h;
     g.lineStyle(3, colours.focus);
     g.beginPath();
     points.forEach((p, i) => (i === 0 ? g.moveTo(xFor(p.year), yFor(p.t)) : g.lineTo(xFor(p.year), yFor(p.t))));
     g.strokePath();
     g.fillStyle(colours.focus);
     points.forEach((p) => g.fillCircle(xFor(p.year), yFor(p.t), 4));
-    this.add.text(chart.x, chart.y + chart.h + 6, 'Start', { fontFamily: FONT, fontSize: '13px', color: colours.textDim });
-    this.add.text(chart.x + chart.w, chart.y + chart.h + 6, `Year ${d.balance.gameLengthYears}`, { fontFamily: FONT, fontSize: '13px', color: colours.textDim }).setOrigin(1, 0);
+    this.add.text(chart.x, chart.y + chart.h + 6, `Start of ${d.balance.startYear}`, { fontFamily: FONT, fontSize: '13px', color: colours.textDim });
+    this.add.text(chart.x + chart.w, chart.y + chart.h + 6, `End of ${lastCalendarYear(d)}`, { fontFamily: FONT, fontSize: '13px', color: colours.textDim }).setOrigin(1, 0);
 
     const choices = s.history.map((h) => {
       const q = d.quiz.find((x) => x.id === h.quiz.questionId)!;
       const a = q.answers.find((x) => x.id === h.quiz.answerId)!;
-      return `Y${h.year}: ${a.label} (${signedTonnes(h.quiz.footprintDelta)}) → ${formatTonnes(h.footprintAfter)}`;
+      return `${calendarYear(d, h.year)}: ${a.label} (${signedTonnes(h.quiz.footprintDelta)}) → ${formatTonnes(h.footprintAfter)}`;
     });
     textBlock(this, rightX + 16, chart.y + chart.h + 30, colW - 32, choices.join('\n'), { ...text.small, fontSize: '16px', lineSpacing: 2 });
 
