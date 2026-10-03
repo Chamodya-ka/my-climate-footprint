@@ -17,9 +17,16 @@ export const LANDSLIDE_HOUSE = 'hillysides-house';
 /** Purchase price of FLOOD_HOUSE, so tests don't depend on placeholder prices. */
 export const FLOOD_PRICE = data.houses.find((h) => h.id === FLOOD_HOUSE)!.price;
 
+/** Year 1's question in a game started with seed 1 (the default in these helpers). */
+export const YEAR1_QUESTION = quizForYear(data, { ...newGame(data, 1), year: 1 });
+/** Index of the correct answer to YEAR1_QUESTION (the lowest footprint change). */
+export const YEAR1_CORRECT = YEAR1_QUESTION.answers.findIndex(
+  (a) => a.footprintDelta === data.balance.quizAnswers.correct.footprintDelta,
+);
+
 /** Answers the current year's question with the answer at `answerIndex`. */
 export function answer(s: GameState, d: GameData = data, answerIndex = 0): GameState {
-  const choice = quizForYear(d, s.year).answers[answerIndex]!;
+  const choice = quizForYear(d, s).answers[answerIndex]!;
   return expectOk(answerQuiz(s, d, choice.id));
 }
 

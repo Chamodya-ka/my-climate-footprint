@@ -5,7 +5,7 @@
  * - every review covers cause → effect → what helped or would have helped;
  * - placeholder numbers are "game values", never real-world data.
  */
-import type { Area, Disaster, GameData, Mod, QuizQuestion } from '../data/schemas';
+import type { Area, Disaster, GameData, Mod, QuizPriority, QuizQuestion } from '../data/schemas';
 import { bestMissingMod, modsThatDontFit } from '../sim/advice';
 import { damageIfHit, hitsLeft, reductionFrom } from '../sim/damage';
 import { repairCost } from '../sim/economy';
@@ -14,7 +14,7 @@ import {
   getArea,
   getHouse,
   getMod,
-  quizForYear,
+  getQuestion,
   type DisasterResult,
   type GameState,
   type HouseState,
@@ -77,7 +77,7 @@ export function damageIfHitLine(data: GameData, house: HouseState): string {
 }
 
 function footprintCause(data: GameData, rec: YearRecord): string {
-  const q = quizForYear(data, rec.year);
+  const q = getQuestion(data, rec.quiz.questionId);
   const answer = q.answers.find((a) => a.id === rec.quiz.answerId);
   const parts = [`yearly rise ${signedTonnes(rec.baseIncrement)}`];
   parts.push(`the "${answer?.label ?? rec.quiz.answerId}" choice ${signedTonnes(rec.quiz.footprintDelta)}`);
@@ -224,7 +224,7 @@ export interface HudIntroStep {
 
 /** The short tour of the HUD boxes, shown at the start of a new game. */
 export function hudIntro(data: GameData): HudIntroStep[] {
-  const { startingBudget, yearlyIncome, actionsPerRepair } = data.balance;
+  const { startingBudget, incomePercentOfHouseValue, actionsPerRepair } = data.balance;
   return [
     {
       key: 'footprint',
@@ -237,7 +237,7 @@ export function hudIntro(data: GameData): HudIntroStep[] {
       key: 'bank',
       title: 'Bank',
       body:
-        `Your money. You start with ${formatMoney(startingBudget)} and get ${formatMoney(yearlyIncome)} at the start of each year. ` +
+        `Your money. You start with ${formatMoney(startingBudget)}, and each year starts with ${incomePercentOfHouseValue}% of what you paid for your house added. ` +
         `It pays for your house, upgrades and repairs, and can't go below $0.`,
     },
     {
@@ -255,4 +255,9 @@ export function hudIntro(data: GameData): HudIntroStep[] {
         'back to full value, so each year you choose between repairing and preparing.',
     },
   ];
+}
+
+/** After answering: the COP31 priority behind the question and its global goal. */
+export function cop31Line(priority: QuizPriority): string {
+  return `COP31 priority: ${priority.name}. Goal: ${priority.goal}`;
 }

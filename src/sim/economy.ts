@@ -1,6 +1,17 @@
 import type { GameData, House } from '../data/schemas';
 import type { HouseState } from './state';
 
+const PERCENT = 100;
+
+/**
+ * The income added at the start of a year: a share of the house's original value (its
+ * purchase price). Damage and upgrades don't change it.
+ */
+export function yearlyIncome(data: GameData, house: HouseState | null): number {
+  if (!house) return 0;
+  return Math.round((house.purchasePrice * data.balance.incomePercentOfHouseValue) / PERCENT);
+}
+
 export function repairCost(data: GameData, house: HouseState): number {
   return Math.round(data.balance.repairCostRate * (house.fullValue - house.value));
 }

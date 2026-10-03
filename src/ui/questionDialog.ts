@@ -1,14 +1,17 @@
 import * as Phaser from 'phaser';
-import type { QuizQuestion } from '../data/schemas';
+import type { QuizPriority, QuizQuestion } from '../data/schemas';
 import { announce } from './a11y';
 import { Button, FocusNav } from './buttons';
-import { quizFeedback } from './copy';
+import { cop31Line, quizFeedback } from './copy';
 import type { BoxRect } from './HUD';
 import { colours, FONT, HEIGHT, text, WIDTH } from './theme';
 
 const W = 760;
 const PAD = 20;
 const BTN_H = 52;
+/** Answer buttons fit a two-line label. */
+const ANSWER_H = 64;
+const ANSWER_FONT = 17;
 const GAP = 10;
 const COLS = 2;
 const CONTINUE_W = 200;
@@ -27,6 +30,8 @@ const RADIUS = 14;
 
 export interface QuestionDialogOptions {
   question: QuizQuestion;
+  /** The COP31 priority the question is about: named, with its goal, only after answering. */
+  priority: QuizPriority;
   /** The HUD's carbon footprint box: the bubble grows out of it. */
   from: BoxRect;
   /** Main nav to pause until the question is answered. */
@@ -46,7 +51,7 @@ export interface QuestionDialogOptions {
  */
 export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): void {
   opts.nav.enabled = false;
-  const { from, question } = opts;
+  const { from, question, priority } = opts;
 
   const blocker = scene.add.rectangle(0, 0, WIDTH, HEIGHT, 0x000000, DIM).setOrigin(0).setDepth(BLOCKER_DEPTH).setInteractive();
   blocker.setAlpha(0);
@@ -162,6 +167,16 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
       }),
       8,
     );
+    // The COP31 priority and real-world goal behind the question, only after answering.
+    add(
+      scene.add.text(0, 0, cop31Line(priority), {
+        fontFamily: FONT,
+        fontSize: '15px',
+        color: colours.text,
+        wordWrap: { width: inner },
+      }),
+      8,
+    );
     bubble.add(items);
     const cont = new Button(scene, left + W - PAD - CONTINUE_W, y + 4, CONTINUE_W, BTN_H, {
       label: 'Continue',
@@ -171,7 +186,7 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
     bubble.add(cont);
     nav.add(cont);
     drawBubble(y + 4 + BTN_H + PAD - top);
-    announce(`${fb.verdict} ${fb.footprintLine}`);
+    announce(`${fb.verdict} ${fb.footprintLine} ${cop31Line(priority)}`);
     nav.enabled = true;
     nav.focus(cont);
   };
@@ -183,12 +198,12 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
     const b = new Button(
       scene,
       x0 + (i % COLS) * (bw + GAP),
-      contentTop + Math.floor(i / COLS) * (BTN_H + GAP),
+      contentTop + Math.floor(i / COLS) * (ANSWER_H + GAP),
       bw,
-      BTN_H,
+      ANSWER_H,
       {
         label: answer.label,
-        fontSize: 19,
+        fontSize: ANSWER_FONT,
         onActivate: () => {
           opts.onAnswer(answer.id);
           showFeedback(answer.id);
@@ -198,7 +213,7 @@ export function showQuestion(scene: Phaser.Scene, opts: QuestionDialogOptions): 
     bubble.add(b);
     nav.add(b);
   });
-  drawBubble(contentTop - top + rows * BTN_H + (rows - 1) * GAP + PAD);
+  drawBubble(contentTop - top + rows * ANSWER_H + (rows - 1) * GAP + PAD);
 
   bubble.setScale(0).setAlpha(0);
   announce(`What would you do? ${question.prompt}`);

@@ -36,6 +36,12 @@ describe('data validation', () => {
     expect(() => parseGameData(bad)).toThrow(/first band must start/);
   });
 
+  it('fails on a question with an unknown COP31 priority', () => {
+    const bad = structuredClone(rawGameData) as { quiz: { questions: { priority: string }[] } } & typeof rawGameData;
+    bad.quiz.questions[0]!.priority = 'teleportation';
+    expect(() => parseGameData(bad)).toThrow(/unknown priority/);
+  });
+
   it('fails on a question without exactly one correct, one neutral and two wrong answers', () => {
     type RawQuiz = { quiz: { questions: { answers: { footprintDelta: number }[] }[] } };
     const tooFew = structuredClone(rawGameData) as RawQuiz & typeof rawGameData;

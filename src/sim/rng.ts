@@ -22,3 +22,16 @@ export function nextRandom(state: number): RandomDraw {
   const value = ((t ^ (t >>> 14)) >>> 0) / 0x100000000;
   return { value, state: next };
 }
+
+/** Fisher–Yates shuffle driven by the seeded RNG. Returns a new array and the advanced RNG state. */
+export function shuffle<T>(items: readonly T[], state: number): { items: T[]; state: number } {
+  const out = [...items];
+  let s = state;
+  for (let i = out.length - 1; i > 0; i--) {
+    const draw = nextRandom(s);
+    s = draw.state;
+    const j = Math.floor(draw.value * (i + 1));
+    [out[i], out[j]] = [out[j]!, out[i]!];
+  }
+  return { items: out, state: s };
+}

@@ -15,7 +15,8 @@ const fullPerDisaster = z.record(disasterSchema, percent);
 
 export const balanceSchema = z.strictObject({
   startingBudget: money,
-  yearlyIncome: money,
+  /** Each year starts with this percentage of the house's original value (purchase price) added to the bank. */
+  incomePercentOfHouseValue: z.number().nonnegative(),
   actionsPerTurn: z.number().int().positive(),
   actionsPerMod: z.number().int().positive(),
   actionsPerRepair: z.number().int().positive(),
@@ -128,10 +129,25 @@ export const modsSchema = z.strictObject({
 });
 
 export const quizSchema = z.strictObject({
+  /** The COP31 priorities the questions are built around. */
+  priorities: z
+    .array(
+      z.strictObject({
+        id,
+        name: z.string().min(1),
+        /** The global goal, shown after answering. */
+        goal: z.string().min(1),
+        summary: z.string().min(1),
+        source,
+      }),
+    )
+    .min(1),
   questions: z
     .array(
       z.strictObject({
         id,
+        /** The COP31 priority this question is about (an id from `priorities`). */
+        priority: id,
         prompt: z.string().min(1),
         answers: z
           .array(
@@ -159,6 +175,7 @@ export type House = z.infer<typeof housesSchema>['houses'][number];
 export type Mod = z.infer<typeof modsSchema>['mods'][number];
 export type QuizQuestion = z.infer<typeof quizSchema>['questions'][number];
 export type QuizAnswer = QuizQuestion['answers'][number];
+export type QuizPriority = z.infer<typeof quizSchema>['priorities'][number];
 
 export interface GameData {
   balance: Balance;
@@ -168,6 +185,7 @@ export interface GameData {
   houses: House[];
   mods: Mod[];
   quiz: QuizQuestion[];
+  quizPriorities: QuizPriority[];
 }
 
 export interface RawGameData {
@@ -223,6 +241,11 @@ export function parseGameData(raw: RawGameData): GameData {
   checkUniqueIds('mods.json', mods.mods, problems);
   checkUniqueIds('quiz.json', quiz.questions, problems);
   for (const q of quiz.questions) checkUniqueIds(`quiz.json ${q.id} answers`, q.answers, problems);
+  checkUniqueIds('quiz.json priorities', quiz.priorities, problems);
+  const priorityIds = new Set(quiz.priorities.map((p) => p.id));
+  for (const q of quiz.questions) {
+    if (!priorityIds.has(q.priority)) problems.push(`quiz.json ${q.id}: unknown priority "${q.priority}"`);
+  }
 
   const regionIds = new Set(areas.regions.map((r) => r.id));
   for (const area of areas.areas) {
@@ -285,5 +308,6 @@ export function parseGameData(raw: RawGameData): GameData {
     houses: houses.houses,
     mods: mods.mods,
     quiz: quiz.questions,
+    quizPriorities: quiz.priorities,
   };
 }
