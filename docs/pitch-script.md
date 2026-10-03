@@ -15,7 +15,7 @@ The pitch presents My Climate Footprint as a teaching tool for schools. Use thre
 
 **Screen:** Begin with the team on camera, then show `theslide.pdf` as the opening continues.
 
-**Voice 1:** “Hi, we're Team Remint. Think of a young person you care about. One day, they may buy a home or lead a community. They'll make those decisions in a changing climate. They deserve to understand the risks and know what they can do.”
+**Voice 1:** “Hi, we're Team Remint. Think of a young person you care about. One day, they may buy a home or lead a community. They'll make those decisions in a worsening climate. They deserve to understand the risks and know what they can do.”
 
 ## 0:22–0:45 — Introduce the classroom tool
 
@@ -27,7 +27,7 @@ The pitch presents My Climate Footprint as a teaching tool for schools. Use thre
 
 **Screen:** The year's question opens after the house is bought. Hold briefly on the choices, select an answer, show its feedback, then close the question.
 
-**Voice 3:** “Each year brings a choice about transport, waste or buildings. Teachers can ask students to vote and explain why. The game imagines everyone choosing the same way. It shows how shared decisions can increase or reduce the pollution warming our planet, changing disaster risk in the game.”
+**Voice 3:** “Each year brings a choice about transport, waste or buildings. Teachers can ask students to vote and explain why. It then shows how collectively decisions can increase or decrease the carbon emissions, hence changing the probability of a disastrous event”
 
 ## 1:07–1:32 — Put the choice into action
 
@@ -45,7 +45,7 @@ The pitch presents My Climate Footprint as a teaching tool for schools. Use thre
 
 **Screen:** Return to the team slide or show all team members on camera.
 
-**Voice 1:** “Our COP31 goal is climate resilient cities. Tomorrow's homeowners and leaders are in classrooms today. Let's help them protect the places they'll call home. Thank you.”
+**Voice 1:** “Our COP31 goal is climate resilience through awareness. Tomorrow's homeowners and leaders are in classrooms today. Let's help them protect the places they'll call home. Thank you.”
 
 ## Recording notes
 
