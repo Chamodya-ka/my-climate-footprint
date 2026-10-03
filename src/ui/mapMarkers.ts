@@ -4,6 +4,9 @@ import type { Focusable, FocusNav } from './buttons';
 import { colours, FONT } from './theme';
 
 const FOCUS_SCALE = 1.08;
+/** Region label padding: room for the tint dot on the left, and the right-hand margin. */
+const LABEL_TEXT_LEFT = 38;
+const LABEL_TEXT_RIGHT = 18;
 const INK = '#26344a';
 const INK_DIM = '#3a4757';
 
@@ -19,7 +22,7 @@ interface MarkerOptions {
 
 /**
  * Base for focusable things drawn on the map. Focus shows a thick outline,
- * a ▶ and a slightly larger marker, never colour alone.
+ * a thicker outline and a slightly larger marker, never colour alone.
  */
 abstract class MapMarker extends Phaser.GameObjects.Container implements Focusable {
   nav: FocusNav | null = null;
@@ -85,13 +88,15 @@ export class RegionLabel extends MapMarker {
     super(scene, x, y, opts);
     this.nameText = scene.add.text(0, 0, '', { fontFamily: FONT, fontSize: '26px', color: INK, fontStyle: 'bold' });
     const hazardText = scene.add.text(0, 0, hazard, { fontFamily: FONT, fontSize: '15px', color: INK_DIM });
-    this.nameText.setText(`▶ ${title}`); // measure with the focus marker so the pill doesn't resize
-    this.boxW = Math.max(this.nameText.width, hazardText.width) + 56;
+    this.nameText.setText(title).setOrigin(0.5, 0);
+    hazardText.setOrigin(0.5, 0);
+    this.boxW = Math.max(this.nameText.width, hazardText.width) + LABEL_TEXT_LEFT + LABEL_TEXT_RIGHT;
     this.boxH = this.nameText.height + hazardText.height + 14;
     this.bg = scene.add.graphics();
-    const left = -this.boxW / 2 + 38;
-    this.nameText.setPosition(left, -this.boxH / 2 + 6);
-    hazardText.setPosition(left, this.nameText.y + this.nameText.height);
+    // Centred in the space right of the tint dot.
+    const centre = (LABEL_TEXT_LEFT - LABEL_TEXT_RIGHT) / 2;
+    this.nameText.setPosition(centre, -this.boxH / 2 + 6);
+    hazardText.setPosition(centre, this.nameText.y + this.nameText.height);
     const hit = scene.add.rectangle(0, 0, this.boxW, this.boxH, 0xffffff, 0.001);
     this.add([this.bg, this.nameText, hazardText, hit]);
     this.wire(hit);
@@ -111,7 +116,6 @@ export class RegionLabel extends MapMarker {
     this.bg.fillStyle(0xffffff).fillRoundedRect(-w / 2, -h / 2, w, h, 18);
     this.bg.lineStyle(this.focused ? 6 : 4, this.focused ? colours.focus : this.tint).strokeRoundedRect(-w / 2, -h / 2, w, h, 18);
     this.bg.fillStyle(this.tint).fillCircle(-w / 2 + 22, -h / 2 + 22, 8);
-    this.nameText.setText(`${this.focused ? '▶ ' : ''}${this.title}`);
   }
 }
 
@@ -132,7 +136,7 @@ export interface HouseMarkerLook {
 
 /**
  * A house on the zoomed region view: its sprite plus a price tag ("$595k / Standard").
- * Focus outlines the tag, adds a ▶ and enlarges the marker.
+ * Focus thickens the tag's outline and enlarges the marker.
  */
 export class HouseMarker extends MapMarker {
   private readonly tagBg: Phaser.GameObjects.Graphics;
@@ -153,7 +157,7 @@ export class HouseMarker extends MapMarker {
     const sprite = scene.add.image(0, 0, look.texture).setOrigin(0.5, look.anchorY).setDisplaySize(look.w, look.h);
     this.priceText = scene.add.text(0, 0, '', { fontFamily: FONT, fontSize: '22px', color: INK, fontStyle: 'bold' }).setOrigin(0.5, 0);
     const tierText = scene.add.text(0, 0, look.tier, { fontFamily: FONT, fontSize: '14px', color: INK_DIM }).setOrigin(0.5, 0);
-    this.priceText.setText(`▶ ✕ ${look.price}`); // measure with markers so the tag doesn't resize
+    this.priceText.setText(`✕ ${look.price}`); // measure with the ✕ so the tag doesn't resize
     this.tagW = Math.max(this.priceText.width, tierText.width) + 24;
     this.tagH = this.priceText.height + tierText.height + 10;
     const spriteTop = -look.h * (look.anchorY - look.contentTop);
@@ -191,6 +195,6 @@ export class HouseMarker extends MapMarker {
     const base = this.look.tagBelow ? y : y + h;
     g.fillStyle(0xffffff).fillTriangle(-8, base, 8, base, 0, tip);
     this.setAlpha(this.disabled ? 0.6 : 1);
-    this.priceText.setText(`${this.focused ? '▶ ' : ''}${this.disabled ? '✕ ' : ''}${this.look.price}`);
+    this.priceText.setText(`${this.disabled ? '✕ ' : ''}${this.look.price}`);
   }
 }
