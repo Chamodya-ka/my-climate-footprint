@@ -4,7 +4,12 @@ A browser game by **Team Remint** that helps students learn about climate choice
 
 **[Play the game](https://my-climate-footprint.vercel.app/)** · [Read our pitch](docs/pitch-script.md) · [View the presentation slide](theslide.pdf)
 
-Demo video: in preparation.
+Demo video: 
+<p align="center">
+  <a href="https://youtu.be/vBn_vD-HKDA">
+    <img src="https://youtu.be/vBn_vD-HKDA" alt="Watch the video" width="600">
+  </a>
+</p>
 
 ## Our solution
 
